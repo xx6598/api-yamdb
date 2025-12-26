@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from validators import validate_username, validate_year
+from .validators import validate_username, validate_year
 
 
 USER = "user"
@@ -179,7 +179,7 @@ class Review(models.Model):
             models.UniqueConstraint(
                 fields=('title', 'author',),
                 name='unique review'
-            )]
+            )],
         ordering = ('pub_date',)
 
     def __str__(self):
