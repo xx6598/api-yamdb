@@ -85,7 +85,13 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.SerializerMethodField()
+
+    def get_rating(self, obj):
+        """Автоматически вычисляется из отзывов"""
+        if hasattr(obj, 'rating') and obj.rating is not None:
+            return round(float(obj.rating), 1)
+        return None
 
     class Meta:
         model = Title
@@ -121,10 +127,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор для модели Review."""
 
-    title = serializers.SlugRelatedField(
-        slug_field='name',
-        read_only=True
-    )
     author = serializers.SlugRelatedField(
         slug_field='username',
         read_only=True
@@ -138,16 +140,27 @@ class ReviewSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate(self, data):
+        """Валидация уникальности отзыва для произведения."""
+        request = self.context.get('request')
+        view = self.context.get('view')
+
+        if request and view and request.method == 'POST':
+            title_pk = view.kwargs.get('title_pk')
+            if title_pk and request.user:
+                if Review.objects.filter(
+                        author=request.user,
+                        title_id=title_pk
+                ).exists():
+                    raise serializers.ValidationError(
+                        'Вы уже оставили отзыв на это произведение!'
+                    )
+        return data
+
     class Meta:
         model = Review
-        fields = '__all__'
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Review.objects.all(),
-                fields=['title', 'author'],
-                message='Вы уже оставили отзыв на это произведение!'
-            )
-        ]
+        exclude = ('title',)  # ✅ Исключаем title из сериализации
+        read_only_fields = ('id', 'author', 'pub_date')
 
 
 class CommentSerializer(serializers.ModelSerializer):
