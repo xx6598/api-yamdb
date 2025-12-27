@@ -171,6 +171,7 @@ class APISignup(APIView):
             status=status.HTTP_200_OK
         )
 
+
 class CategoryViewSet(ModelMixinSet):
     """Управление категориями."""
     queryset = Category.objects.all()
@@ -221,14 +222,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
         """Получение отзывов для конкретного произведения."""
         title = get_object_or_404(
             Title,
-            id=self.kwargs.get('title_id'))
+            id=self.kwargs.get('title_pk'))
         return title.reviews.select_related('author').all()
 
     def perform_create(self, serializer):
         """Создание отзыва с автоматическим заполнением автора и произведения."""
         title = get_object_or_404(
             Title,
-            id=self.kwargs.get('title_id'))
+            id=self.kwargs.get('title_pk'))
 
         # Проверяем, не оставлял ли пользователь уже отзыв на это произведение
         # if Review.objects.filter(author=self.request.user, title=title).exists():
@@ -251,13 +252,13 @@ class CommentViewSet(viewsets.ModelViewSet):
         """Получение комментариев для конкретного отзыва."""
         review = get_object_or_404(
             Review,
-            id=self.kwargs.get('review_id'))
+            id=self.kwargs.get('review_pk'))
         return review.comments.select_related('author').all()
 
     def perform_create(self, serializer):
         """Создание комментария с автоматическим заполнением автора и отзыва."""
         review = get_object_or_404(
             Review,
-            id=self.kwargs.get('review_id'))
+            id=self.kwargs.get('review_pk'))
         serializer.save(author=self.request.user, review=review)
-        logger.info(f'Создан комментарий пользователем {self.request.user.username} к отзыву {review.id}')
+        logger.info(f'Создан комментарий пользователем {self.request.user.username} к отзыву {review.pk}')
