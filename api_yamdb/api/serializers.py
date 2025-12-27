@@ -5,10 +5,21 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 from reviews.models import Category, Comment, Genre, Review, Title, User
+from .validators import (username_validator,
+                         validate_username_not_me,
+                         username_unique_validator)
 
 
 class UsersSerializer(serializers.ModelSerializer):
     """Сериализатор для модели User (полный доступ для админов)."""
+    username = serializers.CharField(
+        max_length=150,
+        validators=[
+            username_validator,
+            validate_username_not_me,
+            username_unique_validator,
+        ],
+    )
 
     class Meta:
         model = User
@@ -20,6 +31,14 @@ class UsersSerializer(serializers.ModelSerializer):
 
 class NotAdminSerializer(serializers.ModelSerializer):
     """Сериализатор для модели User (ограниченный доступ для обычных пользователей)."""
+
+    username = serializers.CharField(
+        max_length=150,
+        validators=[
+            username_validator,
+            validate_username_not_me,
+        ],
+    )
 
     class Meta:
         model = User
@@ -44,16 +63,40 @@ class GetTokenSerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.ModelSerializer):
     """Сериализатор для регистрации новых пользователей."""
 
+    username = serializers.CharField(
+        max_length=150,
+        validators=[
+            username_validator,
+            validate_username_not_me,
+        ],
+    )
+
     def validate_username(self, value):
+        """Дополнительная валидация username."""
         if value.lower() == 'me':
             raise serializers.ValidationError(
                 'Использовать имя "me" в качестве username запрещено.'
             )
         return value
 
+    def validate_email(self, value):
+        """Валидация email при создании нового пользователя."""
+        # Проверяем уникальность email только при создании нового пользователя
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует.'
+            )
+        return value
+
     def create(self, validated_data):
         """Создание пользователя с генерацией кода подтверждения."""
-        # Генерируем 6-значный код из цифр
+        # Дополнительная проверка уникальности username на уровне создания
+        if User.objects.filter(username=validated_data['username']).exists():
+            raise serializers.ValidationError({
+                'username': 'Пользователь с таким username уже существует.'
+            })
+
+        # Генерируем 6-значный код подтверждения
         validated_data['confirmation_code'] = ''.join(
             secrets.choice('0123456789') for _ in range(6)
         )
