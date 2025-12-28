@@ -1,11 +1,8 @@
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.tokens import default_token_generator
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from .validators import validate_username, validate_year
 
+from .validators import validate_year
 
 USER = "user"
 ADMIN = "admin"
@@ -176,10 +173,10 @@ class Review(models.Model):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
-            models.UniqueConstraint(
-                fields=('title', 'author',),
-                name='unique review'
-            )),
+                          models.UniqueConstraint(
+                              fields=('title', 'author',),
+                              name='unique review'
+                          )),
         ordering = ('pub_date',)
 
     def __str__(self):
