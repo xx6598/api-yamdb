@@ -125,23 +125,23 @@ class TitleFilter(filters.FilterSet):
         fields = {
             'name': ['icontains'],
             'year': ['exact', 'gt', 'lt', 'gte', 'lte'],
-            'category': ['exact'],
-            'genre': ['exact'],
+            # 'category': ['exact'],
+            # 'genre': ['exact'],
         }
 
 
-class CompactTitleFilter(filters.FilterSet):
-    """Упрощенная версия фильтра для базового использования."""
-
-    name = filters.CharFilter(lookup_expr='icontains')
-    year = filters.NumberFilter()
-    category = filters.CharFilter(field_name='category__slug')
-    genre = filters.CharFilter(field_name='genre__slug')
-
-    ordering = filters.OrderingFilter(
-        fields=['name', 'year'],
-    )
-
-    class Meta:
-        model = Title
-        fields = ['name', 'year', 'category', 'genre']
+# class CompactTitleFilter(filters.FilterSet):
+#     """Упрощенная версия фильтра для базового использования."""
+#
+#     name = filters.CharFilter(lookup_expr='icontains')
+#     year = filters.NumberFilter()
+#     category = filters.CharFilter(field_name='category__slug')
+#     genre = filters.CharFilter(field_name='genre__slug')
+#
+#     ordering = filters.OrderingFilter(
+#         fields=['name', 'year'],
+#     )
+#
+#     class Meta:
+#         model = Title
+#         fields = ['name', 'year', 'category', 'genre']

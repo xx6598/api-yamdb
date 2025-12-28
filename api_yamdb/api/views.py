@@ -124,16 +124,18 @@ class APISignup(APIView):
         email = serializer.validated_data['email']
         username = serializer.validated_data['username']
 
-        # Проверяем, существует ли пользователь с таким username
         try:
+            # Пытаемся найти существующего пользователя
             user = User.objects.get(username=username)
-            # Если email не совпадает - ошибка
+
+            # Проверяем email
             if user.email != email:
                 return Response(
-                    {'detail': 'Пользователь с таким username уже существует с другим email'},
+                    {'email': 'Email не совпадает с ранее указанным для этого пользователя'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            # Если пользователь существует с тем же email - обновляем код подтверждения
+
+            # Если пользователь существует и email совпадает - генерируем новый код
             user.confirmation_code = ''.join(
                 secrets.choice('0123456789') for _ in range(6)
             )
@@ -147,6 +149,7 @@ class APISignup(APIView):
                     {'email': 'Пользователь с таким email уже существует'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
             # Создаем нового пользователя
             user = serializer.save()
             logger.info(f'Создан новый пользователь: {username}')
@@ -163,9 +166,11 @@ class APISignup(APIView):
             'email_subject': 'Код подтверждения для доступа к API!'
         }
 
-        if not self.send_email(email_data):  # ✅ Теперь корректно передает данные
+        if not self.send_email(email_data):
             logger.warning(f'Не удалось отправить email пользователю {username}')
 
+        # ВСЕГДА возвращаем 200 OK при успешной обработке
+        # как для нового пользователя, так и для повторного запроса
         return Response(
             {'username': user.username, 'email': user.email},
             status=status.HTTP_200_OK

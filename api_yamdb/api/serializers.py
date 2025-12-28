@@ -61,50 +61,30 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    """Сериализатор для регистрации новых пользователей."""
-
     username = serializers.CharField(
         max_length=150,
-        validators=[
-            username_validator,
-            validate_username_not_me,
-        ],
+        validators=[username_validator, validate_username_not_me],
     )
-
-    def validate_username(self, value):
-        """Дополнительная валидация username."""
-        if value.lower() == 'me':
-            raise serializers.ValidationError(
-                'Использовать имя "me" в качестве username запрещено.'
-            )
-        return value
-
-    def validate_email(self, value):
-        """Валидация email при создании нового пользователя."""
-        # Проверяем уникальность email только при создании нового пользователя
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже существует.'
-            )
-        return value
-
-    def create(self, validated_data):
-        """Создание пользователя с генерацией кода подтверждения."""
-        # Дополнительная проверка уникальности username на уровне создания
-        if User.objects.filter(username=validated_data['username']).exists():
-            raise serializers.ValidationError({
-                'username': 'Пользователь с таким username уже существует.'
-            })
-
-        # Генерируем 6-значный код подтверждения
-        validated_data['confirmation_code'] = ''.join(
-            secrets.choice('0123456789') for _ in range(6)
-        )
-        return super().create(validated_data)
+    # Явно объявим email без уник-валидаторов
+    email = serializers.EmailField(max_length=254)
 
     class Meta:
         model = User
         fields = ('email', 'username')
+        # Важно: отключаем автоматический UniqueValidator для email
+        extra_kwargs = {
+            'email': {'validators': []},
+        }
+
+    def create(self, validated_data):
+        if User.objects.filter(username=validated_data['username']).exists():
+            raise serializers.ValidationError({
+                'username': 'Пользователь с таким username уже существует.'
+            })
+        validated_data['confirmation_code'] = ''.join(
+            secrets.choice('0123456789') for _ in range(6)
+        )
+        return super().create(validated_data)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -202,7 +182,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        exclude = ('title',)  # ✅ Исключаем title из сериализации
+        exclude = ('title',)
         read_only_fields = ('id', 'author', 'pub_date')
 
 
