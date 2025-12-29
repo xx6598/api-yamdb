@@ -1,14 +1,12 @@
 import secrets
 from datetime import datetime
+from typing import Any, Dict
 
 from rest_framework import serializers
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .validators import (
-    username_validator,
-    validate_username_not_me,
-    username_unique_validator
-)
+from .validators import (username_unique_validator, username_validator,
+                         validate_username_not_me)
 
 
 class UsersSerializer(serializers.ModelSerializer):
@@ -66,8 +64,7 @@ class SignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('email', 'username')
-        # Важно: отключаем автоматический UniqueValidator для email
-        extra_kwargs = {
+        extra_kwargs: Dict[str, Dict[str, Any]] = {
             'email': {'validators': []},
         }
 

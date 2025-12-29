@@ -32,16 +32,19 @@ class TitleFilter(filters.FilterSet):
         model = Title
         fields = (
             'name',
-            'year', 'year__gt', 'year__lt', 'year_range',
-            'category', 'genre',
+            'year',
+            'year__gt',
+            'year__lt',
+            'year_range',
+            'category',
+            'genre',
         )
 
     def filter_search(self, queryset, name, value):
         if not value:
             return queryset
         return queryset.filter(
-            Q(name__icontains=value) |
-            Q(description__icontains=value)
+            Q(name__icontains=value) | Q(description__icontains=value)
         )
 
     def filter_queryset(self, queryset):
