@@ -5,23 +5,33 @@ from django.core.mail import EmailMessage
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, status, viewsets, serializers
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from reviews.models import Category, Genre, Review, Title, User
+
 from .filters import TitleFilter
 from .mixins import ModelMixinSet
-from .permissions import (AdminModeratorAuthorPermission, AdminOnly,
-                          IsAdminUserOrReadOnly)
-from .serializers import (CategorySerializer, CommentSerializer,
-                          GenreSerializer, GetTokenSerializer,
-                          NotAdminSerializer, ReviewSerializer,
-                          SignUpSerializer, TitleReadSerializer,
-                          TitleWriteSerializer, UsersSerializer)
+from .permissions import (
+    AdminModeratorAuthorPermission,
+    AdminOnly,
+    IsAdminUserOrReadOnly,
+)
+from .serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    GetTokenSerializer,
+    NotAdminSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    UsersSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +39,10 @@ logger = logging.getLogger(__name__)
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UsersSerializer
-    permission_classes = (permissions.IsAuthenticated, AdminOnly,)
+    permission_classes = (
+        permissions.IsAuthenticated,
+        AdminOnly,
+    )
     lookup_field = 'username'
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
@@ -39,15 +52,16 @@ class UsersViewSet(viewsets.ModelViewSet):
         methods=['GET', 'PATCH'],
         detail=False,
         permission_classes=(permissions.IsAuthenticated,),
-        url_path='me')
+        url_path='me',
+    )
     def get_current_user_info(self, request):
-        serializer_class = (UsersSerializer if request.user.is_admin
-                            else NotAdminSerializer)
+        serializer_class = (
+            UsersSerializer if request.user.is_admin else NotAdminSerializer
+        )
         if request.method == 'PATCH':
             serializer = serializer_class(
-                request.user,
-                data=request.data,
-                partial=True)
+                request.user, data=request.data, partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -66,23 +80,25 @@ class APIGetToken(APIView):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            logger.warning(f'Попытка получения токена для несуществующего'
-                           f' пользователя: {username}')
+            logger.warning(
+                'Попытка получения токена для несуществующего пользователя %s',
+                username,
+            )
             return Response(
                 {'username': 'Пользователь не найден!'},
-                status=status.HTTP_404_NOT_FOUND)
+                status=status.HTTP_404_NOT_FOUND,
+            )
         if confirmation_code == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
-            logger.info(f'Успешное получение токена'
-                        f' пользователем: {username}')
-            return Response(
-                {'token': str(token)},
-                status=status.HTTP_200_OK)
-        logger.warning(f'Неверный код подтверждения для'
-                       f' пользователя: {username}')
+            logger.info('Успешное получение токена пользователем %s', username)
+            return Response({'token': str(token)}, status=status.HTTP_200_OK)
+        logger.warning(
+            'Неверный код подтверждения для пользователя: %s', username
+        )
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
-            status=status.HTTP_400_BAD_REQUEST)
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class APISignup(APIView):
@@ -93,14 +109,15 @@ class APISignup(APIView):
             email = EmailMessage(
                 subject=data.get('email_subject', 'Код подтверждения'),
                 body=data.get('email_body', ''),
-                to=[data.get('to_email')]
+                to=[data.get('to_email')],
             )
             email.send()
-            logger.info(f'Email отправлен на {data.get("to_email")}')
+            logger.info('Email отправлен на %s', data.get('to_email'))
             return True
         except Exception as e:
-            logger.error(f'Ошибка отправки email'
-                         f' на {data.get("to_email")}: {e}')
+            logger.error(
+                'Ошибка отправки email на %s: %s', data.get('to_email'), e
+            )
             return False
 
     def post(self, request):
@@ -112,44 +129,47 @@ class APISignup(APIView):
             user = User.objects.get(username=username)
             if user.email != email:
                 return Response(
-                    {'email': 'Email не совпадает с ранее указанным'
-                              ' для этого пользователя'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {
+                        'email': 'Email не совпадает с ранее указанным'
+                        ' для этого пользователя'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             user.confirmation_code = ''.join(
                 secrets.choice('0123456789') for _ in range(6)
             )
             user.save()
-            logger.info(f'Обновлен код подтверждения для существующего'
-                        f' пользователя: {username}')
+            logger.info(
+                'Обновлен код подтверждения для существующего пользователя %s',
+                username,
+            )
         except User.DoesNotExist:
             if User.objects.filter(email=email).exists():
                 return Response(
                     {'email': 'Пользователь с таким email уже существует'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             user = serializer.save()
-            logger.info(f'Создан новый пользователь: {username}')
+            logger.info('Создан новый пользователь: %s', username)
 
         email_body = (
-            f'Доброе время суток, {user.username}.\n\n'
-            f'Код подтверждения для доступа к API:'
+            f'Ваш код подтверждения для доступа к API:'
             f' {user.confirmation_code}\n\n'
-            f'Используйте этот код для получения токена доступа.'
         )
         email_data = {
             'email_body': email_body,
             'to_email': user.email,
-            'email_subject': 'Код подтверждения для доступа к API!'
+            'email_subject': 'Код подтверждения для доступа к API',
         }
 
         if not self.send_email(email_data):
-            logger.warning(f'Не удалось отправить email'
-                           f' пользователю {username}')
+            logger.warning(
+                'Не удалось отправить email пользователю %s', username
+            )
 
         return Response(
             {'username': user.username, 'email': user.email},
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
 
 
@@ -172,9 +192,12 @@ class GenreViewSet(ModelMixinSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(
-        rating=Avg('reviews__score')
-    ).select_related('category').prefetch_related('genre').all()
+    queryset = (
+        Title.objects.annotate(rating=Avg('reviews__score'))
+        .select_related('category')
+        .prefetch_related('genre')
+        .all()
+    )
     permission_classes = (IsAdminUserOrReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
@@ -195,18 +218,17 @@ class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_queryset(self):
-        title = get_object_or_404(
-            Title,
-            id=self.kwargs.get('title_pk'))
+        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
         return title.reviews.select_related('author').all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(
-            Title,
-            id=self.kwargs.get('title_pk'))
+        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
         serializer.save(author=self.request.user, title=title)
-        logger.info(f'Создан отзыв пользователем {self.request.user.username}'
-                    f' на произведение {title.name}')
+        logger.info(
+            'Создан отзыв пользователем %s на произведение %s',
+            self.request.user.username,
+            title.name,
+        )
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -216,15 +238,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_queryset(self):
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs.get('review_pk'))
+        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
         return review.comments.select_related('author').all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(
-            Review,
-            id=self.kwargs.get('review_pk'))
+        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
         serializer.save(author=self.request.user, review=review)
-        logger.info(f'Создан комментарий пользователем'
-                    f' {self.request.user.username} к отзыву {review.pk}')
+        logger.info(
+            'Создан комментарий пользователем %s к отзыву %s',
+            self.request.user.username,
+            review.pk,
+        )

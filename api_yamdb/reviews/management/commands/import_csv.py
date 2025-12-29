@@ -3,9 +3,11 @@ import os
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
-from reviews.models import Category, Genre, Title, Review, Comment
+from reviews.models import Category, Comment, Genre, Review, Title
 
 User = get_user_model()
 
@@ -31,88 +33,108 @@ class Command(BaseCommand):
                 imported = self.import_from_csv(file_path, model)
                 total_imported += imported
                 self.stdout.write(
-                    self.style.SUCCESS(f'Загружено {imported} записей'
-                                       f' в {model._meta.verbose_name}')
+                    self.style.SUCCESS(
+                        'Загружено %s записей в %s',
+                        imported,
+                        model._meta.verbose_name,
+                    )
                 )
             else:
                 self.stdout.write(
-                    self.style.WARNING(f'Файл {filename} не найден')
+                    self.style.WARNING('Файл %s не найден', filename)
                 )
         self.stdout.write(
-            self.style.SUCCESS(f'\nИмпорт завершен.'
-                               f' Всего записей: {total_imported}')
+            self.style.SUCCESS(
+                '\nИмпорт завершен. Всего записей: %s', total_imported
+            )
         )
 
     def import_from_csv(self, file_path, model):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            successful_imports = 0
-            for row_dict in reader:
-                try:
-                    self.process_model_fields(row_dict, model)
-                    instance = model(**row_dict)
-                    instance.save()
-                    self.handle_many_to_many(instance, row_dict, model)
-                    successful_imports += 1
-                except Exception as e:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f'Ошибка в строке {os.path.basename(file_path)}: '
-                            f'{row_dict} - {e}'
+        with transaction.atomic():
+            with open(file_path, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                successful_imports = 0
+                for row_dict in reader:
+                    try:
+                        self.process_model_fields(row_dict, model)
+                        instance = model(**row_dict)
+                        instance.save()
+                        self.handle_many_to_many(instance, row_dict, model)
+                        successful_imports += 1
+                    except Exception as e:
+                        self.stdout.write(
+                            self.style.ERROR(
+                                'Ошибка в строке %s: %s - %s',
+                                os.path.basename(file_path),
+                                row_dict,
+                                e,
+                            )
                         )
-                    )
-                    continue
-            return successful_imports
+                        continue
+                return successful_imports
 
     def process_model_fields(self, row_dict, model):
-        model_name = model._meta.model_name
-        if model_name == 'user':
-            if 'password' not in row_dict or not row_dict.get('password'):
-                row_dict['password'] = make_password('default_password_123')
-        elif model_name == 'title':
-            if 'category' in row_dict:
-                try:
-                    category_obj = Category.objects.get(
-                        id=row_dict['category'])
-                    row_dict['category'] = category_obj
-                except Category.DoesNotExist:
-                    raise Exception(f"Категория с ID"
-                                    f" {row_dict['category']} не найдена")
-        elif model_name == 'review':
-            if 'author' in row_dict:
-                try:
-                    user_obj = User.objects.get(id=row_dict['author'])
-                    row_dict['author'] = user_obj
-                except User.DoesNotExist:
-                    raise Exception(f"Пользователь с ID"
-                                    f" {row_dict['author']} не найден")
-            if 'title_id' in row_dict:
-                try:
-                    title_obj = Title.objects.get(id=row_dict['title_id'])
-                    row_dict['title'] = title_obj
-                    del row_dict['title_id']  # Удаляем исходный ключ
-                except Title.DoesNotExist:
-                    raise Exception(f"Произведение с ID"
-                                    f" {row_dict['title_id']} не найдено")
-        elif model_name == 'comment':
-            if 'author' in row_dict:
-                try:
-                    user_obj = User.objects.get(id=row_dict['author'])
-                    row_dict['author'] = user_obj
-                except User.DoesNotExist:
-                    raise Exception(f"Пользователь с ID"
-                                    f" {row_dict['author']} не найден")
-            if 'review_id' in row_dict:
-                try:
-                    review_obj = Review.objects.get(id=row_dict['review_id'])
-                    row_dict['review'] = review_obj
-                    del row_dict['review_id']
-                except Review.DoesNotExist:
-                    raise Exception(f"Отзыв с ID"
-                                    f" {row_dict['review_id']} не найден")
+        if model is User:
+            self._process_user_fields(row_dict)
+        elif model is Title:
+            self._process_title_fields(row_dict)
+        elif model is Review:
+            self._process_review_fields(row_dict)
+        elif model is Comment:
+            self._process_comment_fields(row_dict)
+
+    def _process_user_fields(self, row_dict):
+        if 'password' not in row_dict or not row_dict.get('password'):
+            row_dict['password'] = make_password('default_password_123')
+
+    def _process_title_fields(self, row_dict):
+        if 'category' in row_dict:
+            try:
+                category_obj = Category.objects.get(id=row_dict['category'])
+                row_dict['category'] = category_obj
+            except Category.DoesNotExist as exc:
+                raise ObjectDoesNotExist(
+                    f"Категория с ID {row_dict['category']} не найдена"
+                ) from exc
+
+    def _process_review_fields(self, row_dict):
+        if 'author' in row_dict:
+            try:
+                row_dict['author'] = User.objects.get(id=row_dict['author'])
+            except User.DoesNotExist as exc:
+                raise ValueError(
+                    f"Пользователь с ID {row_dict['author']} не найден"
+                ) from exc
+        if 'title_id' in row_dict:
+            try:
+                row_dict['title'] = Title.objects.get(id=row_dict['title_id'])
+                del row_dict['title_id']
+            except Title.DoesNotExist as exc:
+                raise ValueError(
+                    f"Произведение с ID {row_dict['title_id']} не найдено"
+                ) from exc
+
+    def _process_comment_fields(self, row_dict):
+        if 'author' in row_dict:
+            try:
+                row_dict['author'] = User.objects.get(id=row_dict['author'])
+            except User.DoesNotExist as exc:
+                raise ValueError(
+                    f"Пользователь с ID {row_dict['author']} не найден"
+                ) from exc
+        if 'review_id' in row_dict:
+            try:
+                row_dict['review'] = Review.objects.get(
+                    id=row_dict['review_id']
+                )
+                del row_dict['review_id']
+            except Review.DoesNotExist as exc:
+                raise ValueError(
+                    f"Отзыв с ID {row_dict['review_id']} не найден"
+                ) from exc
 
     def handle_many_to_many(self, instance, row_dict, model):
-        if model._meta.model_name == 'title':
+        if model is Title:
             genre_title_path = os.path.join(
                 'static', 'data', 'genre_title.csv'
             )
@@ -131,13 +153,14 @@ class Command(BaseCommand):
                         except Genre.DoesNotExist:
                             self.stdout.write(
                                 self.style.WARNING(
-                                    f'Жанр с ID {row["genre_id"]} не найден'
+                                    'Жанр с ID %s не найден', row['genre_id']
                                 )
                             )
                         except Exception as e:
                             self.stdout.write(
-                                self.style.ERROR(f'Ошибка добавления'
-                                                 f' жанра: {e}')
+                                self.style.ERROR(
+                                    'Ошибка добавления жанра: %s', {e}
+                                )
                             )
         except Exception as e:
             self.stdout.write(
