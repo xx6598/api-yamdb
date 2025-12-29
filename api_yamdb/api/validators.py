@@ -6,16 +6,16 @@ from rest_framework.validators import UniqueValidator
 User = get_user_model()
 
 username_validator = RegexValidator(
-    regex=r"^[\w.@+-]+\Z", message="Введите корректное имя пользователя."
+    regex=r'^[\w.@+-]+\Z', message='Введите корректное имя пользователя.'
 )
 
 username_unique_validator = UniqueValidator(
     queryset=User.objects.all(),
-    message="Пользователь с таким username уже существует",
+    message='Пользователь с таким username уже существует',
 )
 
 
 def validate_username_not_me(value):
-    if value.lower() == "me":
-        raise serializers.ValidationError("Имя пользователя <me> запрещено")
+    if value.lower() == 'me':
+        raise serializers.ValidationError('Имя пользователя <me> запрещено')
     return value
