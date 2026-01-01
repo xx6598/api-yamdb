@@ -26,34 +26,38 @@ class Command(BaseCommand):
             ('comments.csv', Comment),
         ]
         total_imported = 0
+
         for filename, model in import_order:
             file_path = os.path.join(csv_path, filename)
+
             if os.path.exists(file_path):
                 self.stdout.write(f'\nИмпортируем {filename}...')
                 imported = self.import_from_csv(file_path, model)
                 total_imported += imported
                 self.stdout.write(
                     self.style.SUCCESS(
-                        'Загружено %s записей в %s',
-                        imported,
-                        model._meta.verbose_name,
+                        f'Загружено {imported} записей в {model._meta.verbose_name}'
                     )
                 )
             else:
                 self.stdout.write(
-                    self.style.WARNING('Файл %s не найден', filename)
+                    self.style.WARNING(f'Файл {filename} не найден')
                 )
+
         self.stdout.write(
             self.style.SUCCESS(
-                '\nИмпорт завершен. Всего записей: %s', total_imported
+                f'\nИмпорт завершен. Всего записей: {total_imported}'
             )
         )
 
     def import_from_csv(self, file_path, model):
+        """Импорт данных из CSV файла с использованием транзакций"""
+
         with transaction.atomic():
             with open(file_path, 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 successful_imports = 0
+
                 for row_dict in reader:
                     try:
                         self.process_model_fields(row_dict, model)
@@ -61,19 +65,21 @@ class Command(BaseCommand):
                         instance.save()
                         self.handle_many_to_many(instance, row_dict, model)
                         successful_imports += 1
+
                     except Exception as e:
                         self.stdout.write(
                             self.style.ERROR(
-                                'Ошибка в строке %s: %s - %s',
-                                os.path.basename(file_path),
-                                row_dict,
-                                e,
+                                f'Ошибка в строке {os.path.basename(file_path)}: '
+                                f'{row_dict} - {e}'
                             )
                         )
                         continue
+
                 return successful_imports
 
     def process_model_fields(self, row_dict, model):
+        """Обработка специфичных полей для каждой модели"""
+
         if model is User:
             self._process_user_fields(row_dict)
         elif model is Title:
@@ -84,10 +90,12 @@ class Command(BaseCommand):
             self._process_comment_fields(row_dict)
 
     def _process_user_fields(self, row_dict):
+        """Обработка полей модели User"""
         if 'password' not in row_dict or not row_dict.get('password'):
             row_dict['password'] = make_password('default_password_123')
 
     def _process_title_fields(self, row_dict):
+        """Обработка полей модели Title"""
         if 'category' in row_dict:
             try:
                 category_obj = Category.objects.get(id=row_dict['category'])
@@ -98,6 +106,7 @@ class Command(BaseCommand):
                 ) from exc
 
     def _process_review_fields(self, row_dict):
+        """Обработка полей модели Review"""
         if 'author' in row_dict:
             try:
                 row_dict['author'] = User.objects.get(id=row_dict['author'])
@@ -105,6 +114,7 @@ class Command(BaseCommand):
                 raise ValueError(
                     f"Пользователь с ID {row_dict['author']} не найден"
                 ) from exc
+
         if 'title_id' in row_dict:
             try:
                 row_dict['title'] = Title.objects.get(id=row_dict['title_id'])
@@ -115,6 +125,7 @@ class Command(BaseCommand):
                 ) from exc
 
     def _process_comment_fields(self, row_dict):
+        """Обработка полей модели Comment"""
         if 'author' in row_dict:
             try:
                 row_dict['author'] = User.objects.get(id=row_dict['author'])
@@ -122,6 +133,7 @@ class Command(BaseCommand):
                 raise ValueError(
                     f"Пользователь с ID {row_dict['author']} не найден"
                 ) from exc
+
         if 'review_id' in row_dict:
             try:
                 row_dict['review'] = Review.objects.get(
@@ -134,6 +146,8 @@ class Command(BaseCommand):
                 ) from exc
 
     def handle_many_to_many(self, instance, row_dict, model):
+        """Обработка ManyToMany связей после создания объекта"""
+
         if model is Title:
             genre_title_path = os.path.join(
                 'static', 'data', 'genre_title.csv'
@@ -142,9 +156,12 @@ class Command(BaseCommand):
                 self.add_genres_to_title(instance, genre_title_path)
 
     def add_genres_to_title(self, title_instance, genre_title_path):
+        """Добавление жанров к произведению из genre_title.csv"""
+
         try:
             with open(genre_title_path, 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
+
                 for row in reader:
                     if int(row['title_id']) == title_instance.id:
                         try:
@@ -153,13 +170,13 @@ class Command(BaseCommand):
                         except Genre.DoesNotExist:
                             self.stdout.write(
                                 self.style.WARNING(
-                                    'Жанр с ID %s не найден', row['genre_id']
+                                    f'Жанр с ID {row["genre_id"]} не найден'
                                 )
                             )
                         except Exception as e:
                             self.stdout.write(
                                 self.style.ERROR(
-                                    'Ошибка добавления жанра: %s', {e}
+                                    f'Ошибка добавления жанра: {e}'
                                 )
                             )
         except Exception as e:
