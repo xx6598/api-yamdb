@@ -2,7 +2,12 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from .validators import validate_year
+from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE, USERNAME_MAX_LENGTH
+from reviews.constants import (CATEGORY_NAME_MAX_LENGTH,
+                               CONFIRMATION_CODE_MAX_LENGTH,
+                               FIRST_NAME_MAX_LENGTH, GENRE_NAME_MAX_LENGTH,
+                               LAST_NAME_MAX_LENGTH, TITLE_NAME_MAX_LENGTH)
+from reviews.validators import validate_year
 
 USER = 'user'
 ADMIN = 'admin'
@@ -17,7 +22,7 @@ ROLE_CHOICES = [
 
 class User(AbstractUser):
     username = models.CharField(
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         unique=True,
         blank=False,
         null=False,
@@ -32,11 +37,15 @@ class User(AbstractUser):
         'биография',
         blank=True,
     )
-    first_name = models.CharField('имя', max_length=150, blank=True)
-    last_name = models.CharField('фамилия', max_length=150, blank=True)
+    first_name = models.CharField(
+        'имя', max_length=FIRST_NAME_MAX_LENGTH, blank=True
+    )
+    last_name = models.CharField(
+        'фамилия', max_length=LAST_NAME_MAX_LENGTH, blank=True
+    )
     confirmation_code = models.CharField(
         'код подтверждения',
-        max_length=255,
+        max_length=CONFIRMATION_CODE_MAX_LENGTH,
         null=True,
         blank=False,
         default='XXXX',
@@ -48,7 +57,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == ADMIN
+        return self.role == ADMIN or self.is_staff
 
     @property
     def is_moderator(self):
@@ -64,7 +73,9 @@ class User(AbstractUser):
 
 
 class Category(models.Model):
-    name = models.CharField('имя категории', max_length=200)
+    name = models.CharField(
+        'имя категории', max_length=CATEGORY_NAME_MAX_LENGTH
+    )
     slug = models.SlugField('слаг категории', unique=True, db_index=True)
 
     class Meta:
@@ -76,7 +87,7 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    name = models.CharField('имя жанра', max_length=200)
+    name = models.CharField('имя жанра', max_length=GENRE_NAME_MAX_LENGTH)
     slug = models.SlugField('cлаг жанра', unique=True, db_index=True)
 
     class Meta:
@@ -88,7 +99,9 @@ class Genre(models.Model):
 
 
 class Title(models.Model):
-    name = models.CharField('название', max_length=200, db_index=True)
+    name = models.CharField(
+        'название', max_length=TITLE_NAME_MAX_LENGTH, db_index=True
+    )
     year = models.IntegerField('год', validators=(validate_year,))
     category = models.ForeignKey(
         Category,
@@ -99,7 +112,9 @@ class Title(models.Model):
         blank=True,
     )
     description = models.TextField(
-        'описание', max_length=255, null=True, blank=True
+        'описание',
+        null=True,
+        blank=True,
     )
     genre = models.ManyToManyField(
         Genre, related_name='titles', verbose_name='жанр'
@@ -120,7 +135,7 @@ class Review(models.Model):
         related_name='reviews',
         verbose_name='произведение',
     )
-    text = models.CharField(max_length=200)
+    text = models.CharField()
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -129,8 +144,13 @@ class Review(models.Model):
     )
     score = models.IntegerField(
         'оценка',
-        validators=(MinValueValidator(1), MaxValueValidator(10)),
-        error_messages={'validators': 'Оценка от 1 до 10!'},
+        validators=(
+            MinValueValidator(SCORE_MIN_VALUE),
+            MaxValueValidator(SCORE_MAX_VALUE),
+        ),
+        error_messages={
+            'validators': f'Оценка от {SCORE_MIN_VALUE} до {SCORE_MAX_VALUE}!'
+        },
     )
     pub_date = models.DateTimeField(
         'дата публикации', auto_now_add=True, db_index=True
@@ -163,7 +183,9 @@ class Comment(models.Model):
         related_name='comments',
         verbose_name='отзыв',
     )
-    text = models.CharField('текст комментария', max_length=200)
+    text = models.CharField(
+        'текст комментария',
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,

@@ -3,10 +3,14 @@ from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
+from api.constants import USERNAME_REGEX_PATTERN
+from reviews.constants import USERNAME_RESTRICTED_SLUG
+
 User = get_user_model()
 
 username_validator = RegexValidator(
-    regex=r'^[\w.@+-]+\Z', message='Введите корректное имя пользователя.'
+    regex=USERNAME_REGEX_PATTERN,
+    message='Введите корректное имя пользователя.',
 )
 
 username_unique_validator = UniqueValidator(
@@ -16,6 +20,8 @@ username_unique_validator = UniqueValidator(
 
 
 def validate_username_not_me(value):
-    if value.lower() == 'me':
-        raise serializers.ValidationError('Имя пользователя <me> запрещено')
+    if value == USERNAME_RESTRICTED_SLUG:
+        raise serializers.ValidationError(
+            f'Имя пользователя <{USERNAME_RESTRICTED_SLUG}> запрещено'
+        )
     return value
