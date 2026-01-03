@@ -68,17 +68,7 @@ class APIGetToken(APIView):
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data['username']
         confirmation_code = serializer.validated_data['confirmation_code']
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            logger.warning(
-                'Попытка получения токена для несуществующего пользователя %s',
-                username,
-            )
-            return Response(
-                {'username': 'Пользователь не найден!'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        user = get_object_or_404(User, username=username)
         if confirmation_code == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
             logger.info('Успешное получение токена пользователем %s', username)
