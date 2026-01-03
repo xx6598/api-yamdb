@@ -144,13 +144,6 @@ class CommentSerializer(serializers.ModelSerializer):
         slug_field='username', read_only=True
     )
 
-    def validate_text(self, value):
-        if len(value.strip()) < 1:
-            raise serializers.ValidationError(
-                'Комментарий не может быть пустым!'
-            )
-        return value
-
     class Meta:
         model = Comment
         fields = '__all__'
