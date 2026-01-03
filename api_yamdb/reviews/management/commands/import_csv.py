@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from reviews.constants import CSV_PATH
 from reviews.models import Category, Comment, Genre, Review, Title
 
 User = get_user_model()
@@ -16,7 +17,7 @@ class Command(BaseCommand):
     help = 'Импорт данных из CSV файлов'
 
     def handle(self, *args, **options):
-        csv_path = os.path.join('static', 'data')
+        csv_path = CSV_PATH
         import_order = [
             ('users.csv', User),
             ('category.csv', Category),
@@ -150,7 +151,7 @@ class Command(BaseCommand):
 
         if model is Title:
             genre_title_path = os.path.join(
-                'static', 'data', 'genre_title.csv'
+                CSV_PATH, 'genre_title.csv'
             )
             if os.path.exists(genre_title_path):
                 self.add_genres_to_title(instance, genre_title_path)

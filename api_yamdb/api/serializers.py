@@ -4,14 +4,15 @@ from typing import Any, Dict
 
 from rest_framework import serializers
 
+from api.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
+from api.validators import (username_unique_validator, username_validator,
+                            validate_username_not_me)
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .validators import (username_unique_validator, username_validator,
-                         validate_username_not_me)
 
 
 class UsersSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         validators=[
             username_validator,
             validate_username_not_me,
@@ -22,14 +23,18 @@ class UsersSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role'
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role',
         )
 
 
 class NotAdminSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         validators=[
             username_validator,
             validate_username_not_me,
@@ -39,8 +44,12 @@ class NotAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role'
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role',
         )
         read_only_fields = ('role',)
 
@@ -56,10 +65,10 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 class SignUpSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
-        max_length=150,
+        max_length=USERNAME_MAX_LENGTH,
         validators=[username_validator, validate_username_not_me],
     )
-    email = serializers.EmailField(max_length=254)
+    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
 
     class Meta:
         model = User
@@ -70,9 +79,9 @@ class SignUpSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         if User.objects.filter(username=validated_data['username']).exists():
-            raise serializers.ValidationError({
-                'username': 'Пользователь с таким username уже существует.'
-            })
+            raise serializers.ValidationError(
+                {'username': 'Пользователь с таким username уже существует.'}
+            )
         validated_data['confirmation_code'] = ''.join(
             secrets.choice('0123456789') for _ in range(6)
         )
@@ -108,8 +117,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
-        queryset=Category.objects.all(),
-        slug_field='slug'
+        queryset=Category.objects.all(), slug_field='slug'
     )
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
@@ -134,16 +142,8 @@ class TitleWriteSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True
+        slug_field='username', read_only=True
     )
-
-    def validate_score(self, value):
-        if value < 1 or value > 10:
-            raise serializers.ValidationError(
-                'Оценка должна быть от 1 до 10!'
-            )
-        return value
 
     def validate(self, data):
         request = self.context.get('request')
@@ -153,8 +153,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             title_pk = view.kwargs.get('title_pk')
             if title_pk and request.user:
                 if Review.objects.filter(
-                        author=request.user,
-                        title_id=title_pk
+                    author=request.user, title_id=title_pk
                 ).exists():
                     raise serializers.ValidationError(
                         'Вы уже оставили отзыв на это произведение!'
@@ -168,13 +167,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    review = serializers.SlugRelatedField(
-        slug_field='id',
-        read_only=True
-    )
+    review = serializers.SlugRelatedField(slug_field='id', read_only=True)
     author = serializers.SlugRelatedField(
-        slug_field='username',
-        read_only=True
+        slug_field='username', read_only=True
     )
 
     def validate_text(self, value):
