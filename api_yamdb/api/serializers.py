@@ -117,6 +117,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         many=True,
         allow_empty=False
     )
+    year = serializers.IntegerField()
 
     def validate_year(self, value):
         current_year = datetime.now().year
