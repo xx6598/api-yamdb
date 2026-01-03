@@ -8,6 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -212,7 +213,10 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (AdminModeratorAuthorPermission,)
+    permission_classes = (
+        IsAuthenticatedOrReadOnly,
+        AdminModeratorAuthorPermission,
+    )
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('score', 'pub_date')
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -233,7 +237,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (AdminModeratorAuthorPermission,)
+    permission_classes = (
+        IsAuthenticatedOrReadOnly,
+        AdminModeratorAuthorPermission,
+    )
     filter_backends = (DjangoFilterBackend,)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
