@@ -4,9 +4,9 @@ from typing import Any, Dict
 
 from rest_framework import serializers
 
+from api.validators import (username_unique_validator, username_validator,
+                            validate_username_not_me)
 from reviews.models import Category, Comment, Genre, Review, Title, User
-from .validators import (username_unique_validator, username_validator,
-                         validate_username_not_me)
 
 
 class UsersSerializer(serializers.ModelSerializer):
