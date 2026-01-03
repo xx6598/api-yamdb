@@ -55,7 +55,7 @@ class GetTokenSerializer(serializers.Serializer):
 class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator, validate_username_not_me],
+        validators=(username_validator, validate_username_not_me),
     )
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
 
@@ -136,7 +136,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         exclude = ('title',)
-        read_only_fields = ('id', 'author', 'pub_date')
 
 
 class CommentSerializer(serializers.ModelSerializer):

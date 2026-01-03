@@ -100,7 +100,7 @@ class APISignup(APIView):
             email = EmailMessage(
                 subject=data.get('email_subject', 'Код подтверждения'),
                 body=data.get('email_body', ''),
-                to=[data.get('to_email')],
+                to=(data.get('to_email'),),
             )
             email.send()
             logger.info('Email отправлен на %s', data.get('to_email'))
