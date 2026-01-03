@@ -114,7 +114,8 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
-        many=True
+        many=True,
+        allow_empty=False
     )
 
     def validate_year(self, value):
