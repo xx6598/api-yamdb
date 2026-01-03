@@ -19,9 +19,9 @@ from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
                              IsAdminUserOrReadOnly)
 from api.serializers import (CategorySerializer, CommentSerializer,
                              GenreSerializer, GetTokenSerializer,
-                             NotAdminSerializer, ReviewSerializer,
-                             SignUpSerializer, TitleReadSerializer,
-                             TitleWriteSerializer, UsersSerializer)
+                             ReviewSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             UsersSerializer)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -46,17 +46,17 @@ class UsersViewSet(viewsets.ModelViewSet):
         url_path='me',
     )
     def get_current_user_info(self, request):
-        serializer_class = (
-            UsersSerializer if request.user.is_admin else NotAdminSerializer
-        )
         if request.method == 'PATCH':
-            serializer = serializer_class(
-                request.user, data=request.data, partial=True
+            serializer = UsersSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+                context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = serializer_class(request.user)
+        serializer = UsersSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
 

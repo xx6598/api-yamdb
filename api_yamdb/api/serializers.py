@@ -31,27 +31,12 @@ class UsersSerializer(serializers.ModelSerializer):
             'role',
         )
 
-
-class NotAdminSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        max_length=USERNAME_MAX_LENGTH,
-        validators=[
-            username_validator,
-            validate_username_not_me,
-        ],
-    )
-
-    class Meta:
-        model = User
-        fields = (
-            'username',
-            'email',
-            'first_name',
-            'last_name',
-            'bio',
-            'role',
-        )
-        read_only_fields = ('role',)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            if not request.user.is_admin:
+                self.fields['role'].read_only = True
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
@@ -151,7 +136,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             title_pk = view.kwargs.get('title_pk')
             if title_pk and request.user:
                 if Review.objects.filter(
-                    author=request.user, title_id=title_pk
+                        author=request.user, title_id=title_pk
                 ).exists():
                     raise serializers.ValidationError(
                         'Вы уже оставили отзыв на это произведение!'
