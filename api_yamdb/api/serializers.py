@@ -120,9 +120,7 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(), slug_field='slug'
     )
     genre = serializers.SlugRelatedField(
-        queryset=Genre.objects.all(),
-        slug_field='slug',
-        many=True,
+        queryset=Genre.objects.all(), slug_field='slug', many=True,
         allow_empty=False
     )
     year = serializers.IntegerField()
