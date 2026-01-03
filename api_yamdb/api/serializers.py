@@ -105,6 +105,9 @@ class TitleWriteSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def to_representation(self, instance):
+        return TitleReadSerializer(instance, context=self.context).data
+
     class Meta:
         model = Title
         fields = '__all__'
