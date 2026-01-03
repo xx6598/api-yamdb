@@ -4,7 +4,9 @@ from typing import Any, Dict
 
 from rest_framework import serializers
 
-from api.constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
+from api.constants import (EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH,
+                           CONF_CODE_MAX_LENGTH
+                           )
 from api.validators import (username_unique_validator, username_validator,
                             validate_username_not_me)
 from reviews.models import Category, Comment, Genre, Review, Title, User
@@ -39,13 +41,15 @@ class UsersSerializer(serializers.ModelSerializer):
                 self.fields['role'].read_only = True
 
 
-class GetTokenSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=True)
-    confirmation_code = serializers.CharField(required=True)
-
-    class Meta:
-        model = User
-        fields = ('username', 'confirmation_code')
+class GetTokenSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_MAX_LENGTH
+    )
+    confirmation_code = serializers.CharField(
+        required=True,
+        max_length=CONF_CODE_MAX_LENGTH
+    )
 
 
 class SignUpSerializer(serializers.ModelSerializer):
