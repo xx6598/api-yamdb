@@ -1,11 +1,13 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from reviews.constants import USERNAME_RESTRICTED_SLUG
+
 
 def validate_username(value):
-    if value == 'me':
+    if value == USERNAME_RESTRICTED_SLUG:
         raise ValidationError(
-            'Имя пользователя не может быть <me>.',
+            f'Имя пользователя не может быть {USERNAME_RESTRICTED_SLUG}.',
             params={'value': value},
         )
 
