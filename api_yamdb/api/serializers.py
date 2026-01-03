@@ -52,29 +52,12 @@ class GetTokenSerializer(serializers.Serializer):
     )
 
 
-class SignUpSerializer(serializers.ModelSerializer):
+class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
         validators=[username_validator, validate_username_not_me],
     )
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
-
-    class Meta:
-        model = User
-        fields = ('email', 'username')
-        extra_kwargs: Dict[str, Dict[str, Any]] = {
-            'email': {'validators': []},
-        }
-
-    def create(self, validated_data):
-        if User.objects.filter(username=validated_data['username']).exists():
-            raise serializers.ValidationError(
-                {'username': 'Пользователь с таким username уже существует.'}
-            )
-        validated_data['confirmation_code'] = ''.join(
-            secrets.choice('0123456789') for _ in range(6)
-        )
-        return super().create(validated_data)
 
 
 class CategorySerializer(serializers.ModelSerializer):
