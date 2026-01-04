@@ -97,11 +97,9 @@ class Title(models.Model):
     year = models.IntegerField('год', validators=(validate_year,))
     category = models.ForeignKey(
         Category,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name='titles',
         verbose_name='категория',
-        null=True,
-        blank=True,
     )
     description = models.TextField(
         'описание',
