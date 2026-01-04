@@ -156,12 +156,16 @@ class ReviewViewSet(viewsets.ModelViewSet):
     filterset_fields = ('score', 'pub_date')
     http_method_names = ['get', 'post', 'patch', 'delete']
 
+    def get_title(self):
+        title_pk = self.kwargs.get('title_pk')
+        return get_object_or_404(Title, id=title_pk)
+
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
+        title = self.get_title()
         return title.reviews.select_related('author').all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
+        title = self.get_title()
         serializer.save(author=self.request.user, title=title)
         logger.info(
             'Создан отзыв пользователем %s на произведение %s',
