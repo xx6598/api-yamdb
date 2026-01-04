@@ -120,8 +120,13 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         return value
 
     def to_representation(self, instance):
-        instance.rating = 0
+        if not hasattr(instance, 'rating'):
+            instance.rating = None
         return TitleReadSerializer(instance, context=self.context).data
+
+    class Meta:
+        model = Title
+        fields = '__all__'
 
     class Meta:
         model = Title
