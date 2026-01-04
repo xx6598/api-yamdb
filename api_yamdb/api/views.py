@@ -72,10 +72,10 @@ class APIGetToken(APIView):
         user = get_object_or_404(User, username=username)
         if default_token_generator.check_token(user, confirmation_token):
             token = RefreshToken.for_user(user).access_token
-            logger.info('Успешное получение токена пользователем %s', username)
+            logger.info(f'Успешное получение токена пользователем {username}')
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         logger.warning(
-            'Неверный код подтверждения (токен) для пользователя: %s', username
+            f'Неверный код подтверждения (токен) для пользователя: {username}'
         )
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
@@ -168,9 +168,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
         logger.info(
-            'Создан отзыв пользователем %s на произведение %s',
-            self.request.user.username,
-            title.name,
+            f'Создан отзыв пользователем {self.request.user.username} '
+            f'на произведение {title.name}'
         )
 
 
@@ -196,7 +195,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         review = self.get_review()
         serializer.save(author=self.request.user, review=review)
         logger.info(
-            'Создан комментарий пользователем %s к отзыву %s',
-            self.request.user.username,
-            review.pk,
+            f'Создан комментарий пользователем {self.request.user.username} '
+            f'к отзыву {review.pk}'
         )
