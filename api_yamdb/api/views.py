@@ -1,7 +1,7 @@
 import logging
-import secrets
 
-from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -56,7 +56,8 @@ class UsersViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UsersSerializer(request.user, context={'request': request})
+        serializer = UsersSerializer(request.user,
+                                     context={'request': request})
         return Response(serializer.data)
 
 
@@ -67,14 +68,14 @@ class APIGetToken(APIView):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data['username']
-        confirmation_code = serializer.validated_data['confirmation_code']
+        confirmation_token = serializer.validated_data['confirmation_code']
         user = get_object_or_404(User, username=username)
-        if confirmation_code == user.confirmation_code:
+        if default_token_generator.check_token(user, confirmation_token):
             token = RefreshToken.for_user(user).access_token
             logger.info('Успешное получение токена пользователем %s', username)
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         logger.warning(
-            'Неверный код подтверждения для пользователя: %s', username
+            'Неверный код подтверждения (токен) для пользователя: %s', username
         )
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
@@ -83,58 +84,30 @@ class APIGetToken(APIView):
 
 
 class APISignup(APIView):
-    permission_classes = (permissions.AllowAny,)
-
-    def send_email(self, data):
-        try:
-            email = EmailMessage(
-                subject=data.get('email_subject', 'Код подтверждения'),
-                body=data.get('email_body', ''),
-                to=[data.get('to_email')],
-            )
-            email.send()
-            logger.info('Email отправлен на %s', data.get('to_email'))
-            return True
-        except Exception as e:
-            logger.error(
-                'Ошибка отправки email на %s: %s', data.get('to_email'), e
-            )
-            return False
+    def send_confirmation_token(self, user):
+        token = default_token_generator.make_token(user)
+        send_mail(
+            subject='Токен для завершения регистрации',
+            message=(
+                'Здравствуйте! '
+                f'Используйте этот токен для завершения регистрации: {token}'
+            ),
+            from_email='noreply@example.com',
+            recipient_list=[user.email],
+        )
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        email = validated_data['email']
-        username = validated_data['username']
-        user, created = User.objects.get_or_create(
-            username=username,
-            defaults={'email': email}
-        )
-        confirmation_code = ''.join(secrets.choice('0123456789')
-                                    for _ in range(6))
-        user.confirmation_code = confirmation_code
-        user.save(update_fields=['confirmation_code'])
 
-        if created:
-            logger.info('Создан новый пользователь: %s', username)
-        else:
-            logger.info('Обновлен код подтверждения для существующего'
-                        ' пользователя %s', username)
-        email_body = (f'Ваш код подтверждения для доступа к API:'
-                      f' {confirmation_code}\n\n')
-        email_data = {
-            'email_body': email_body,
-            'to_email': user.email,
-            'email_subject': 'Код подтверждения для доступа к API',
-        }
-        if not self.send_email(email_data):
-            logger.warning('Не удалось отправить email пользователю %s',
-                           username)
-        return Response(
-            {'username': user.username, 'email': user.email},
-            status=status.HTTP_200_OK,
+        email = serializer.validated_data['email']
+        username = serializer.validated_data['username']
+        user, _ = User.objects.get_or_create(
+            email=email,
+            defaults={'username': username}
         )
+        self.send_confirmation_token(user)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 class CategoryViewSet(ModelMixinSet):

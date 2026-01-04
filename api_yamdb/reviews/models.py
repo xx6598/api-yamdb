@@ -4,7 +4,6 @@ from django.db import models
 
 from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE, USERNAME_MAX_LENGTH
 from reviews.constants import (CATEGORY_NAME_MAX_LENGTH,
-                               CONFIRMATION_CODE_MAX_LENGTH,
                                FIRST_NAME_MAX_LENGTH, GENRE_NAME_MAX_LENGTH,
                                LAST_NAME_MAX_LENGTH, TITLE_NAME_MAX_LENGTH)
 from reviews.validators import validate_year
@@ -42,13 +41,6 @@ class User(AbstractUser):
     )
     last_name = models.CharField(
         'фамилия', max_length=LAST_NAME_MAX_LENGTH, blank=True
-    )
-    confirmation_code = models.CharField(
-        'код подтверждения',
-        max_length=CONFIRMATION_CODE_MAX_LENGTH,
-        null=True,
-        blank=False,
-        default='XXXX',
     )
 
     @property
