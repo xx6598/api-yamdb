@@ -183,12 +183,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
+    def get_review(self):
+        review_pk = self.kwargs.get('review_pk')
+        return get_object_or_404(Review, id=review_pk)
+
     def get_queryset(self):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
+        review = self.get_review()
         return review.comments.select_related('author').all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
+        review = self.get_review()
         serializer.save(author=self.request.user, review=review)
         logger.info(
             'Создан комментарий пользователем %s к отзыву %s',
