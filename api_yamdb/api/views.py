@@ -99,7 +99,6 @@ class APISignup(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         email = serializer.validated_data['email']
         username = serializer.validated_data['username']
         user, _ = User.objects.get_or_create(
