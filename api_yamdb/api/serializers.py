@@ -60,19 +60,16 @@ class SignUpSerializer(serializers.Serializer):
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
-
-        try:
-            user = User.objects.get(username=username)
-            if user.email.lower() != email.lower():
-                raise serializers.ValidationError(
-                    {'email': 'Email не совпадает с ранее указанным'
-                              ' для этого пользователя.'}
-                )
-        except User.DoesNotExist:
-            if User.objects.filter(email__iexact=email).exists():
-                raise serializers.ValidationError(
-                    {'email': 'Пользователь с таким email уже существует.'}
-                )
+        errors = {}
+        username_user = User.objects.filter(username=username).first()
+        if username_user and username_user.email.lower() != email.lower():
+            errors['username'] = ('Пользователь с таким username'
+                                  ' уже существует.')
+        email_user = User.objects.filter(email__iexact=email).first()
+        if email_user and email_user.username != username:
+            errors['email'] = 'Пользователь с таким email уже существует.'
+        if errors:
+            raise serializers.ValidationError(errors)
         return data
 
 
