@@ -142,7 +142,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     ordering = ('-rating',)
 
     def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
+        if self.request.method in permissions.SAFE_METHODS:
             return TitleReadSerializer
         return TitleWriteSerializer
 
