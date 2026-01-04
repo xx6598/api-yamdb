@@ -59,6 +59,30 @@ class SignUpSerializer(serializers.Serializer):
     )
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
 
+    def validate(self, data):
+        """
+        Единая точка валидации для username и email.
+        """
+        username = data.get('username')
+        email = data.get('email')
+
+        try:
+            # 1. Сценарий: Пользователь с таким username уже существует.
+            user = User.objects.get(username=username)
+            # Проверяем, совпадает ли email.
+            if user.email.lower() != email.lower():
+                raise serializers.ValidationError(
+                    {'email': 'Email не совпадает с ранее указанным для этого пользователя.'}
+                )
+        except User.DoesNotExist:
+            # 2. Сценарий: Новый пользователь. Проверяем, не занят ли email.
+            if User.objects.filter(email__iexact=email).exists():
+                raise serializers.ValidationError(
+                    {'email': 'Пользователь с таким email уже существует.'}
+                )
+
+        return data
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:

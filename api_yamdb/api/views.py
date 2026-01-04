@@ -90,52 +90,39 @@ class APISignup(APIView):
             email = EmailMessage(
                 subject=data.get('email_subject', 'Код подтверждения'),
                 body=data.get('email_body', ''),
-                to=(data.get('to_email'),),
+                to=[data.get('to_email')],
             )
             email.send()
             logger.info('Email отправлен на %s', data.get('to_email'))
             return True
         except Exception as e:
-            logger.error('Ошибка отправки email на %s: %s',
-                         data.get('to_email'), e)
+            logger.error(
+                'Ошибка отправки email на %s: %s', data.get('to_email'), e
+            )
             return False
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        email = validated_data['email']
+        username = validated_data['username']
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={'email': email}
+        )
+        confirmation_code = ''.join(secrets.choice('0123456789')
+                                    for _ in range(6))
+        user.confirmation_code = confirmation_code
+        user.save(update_fields=['confirmation_code'])
 
-        email = serializer.validated_data['email']
-        username = serializer.validated_data['username']
-
-        if User.objects.filter(username=username).exists():
-            user = User.objects.get(username=username)
-            if user.email != email:
-                return Response(
-                    {'email': 'Email не совпадает с ранее'
-                              ' указанным для этого пользователя'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user.confirmation_code = ''.join(secrets.choice('0123456789')
-                                             for _ in range(6))
-            user.save()
-            logger.info('Обновлен код подтверждения для'
-                        ' существующего пользователя %s', username)
-        else:
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {'email': 'Пользователь с таким email уже существует'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user = User.objects.create(
-                username=username,
-                email=email,
-                confirmation_code=''.join(secrets.choice('0123456789')
-                                          for _ in range(6))
-            )
+        if created:
             logger.info('Создан новый пользователь: %s', username)
-
-        email_body = f'Ваш код подтверждения для доступа к API:' \
-                     f' {user.confirmation_code}\n\n'
+        else:
+            logger.info('Обновлен код подтверждения для существующего'
+                        ' пользователя %s', username)
+        email_body = (f'Ваш код подтверждения для доступа к API:'
+                      f' {confirmation_code}\n\n')
         email_data = {
             'email_body': email_body,
             'to_email': user.email,
@@ -144,7 +131,6 @@ class APISignup(APIView):
         if not self.send_email(email_data):
             logger.warning('Не удалось отправить email пользователю %s',
                            username)
-
         return Response(
             {'username': user.username, 'email': user.email},
             status=status.HTTP_200_OK,
