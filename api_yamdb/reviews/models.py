@@ -10,7 +10,7 @@ from reviews.constants import (
     LAST_NAME_MAX_LENGTH,
     TITLE_NAME_MAX_LENGTH,
 )
-from reviews.validators import validate_year
+from reviews.validators import validate_year, validate_username
 
 USER = 'user'
 ADMIN = 'admin'
@@ -29,6 +29,7 @@ class User(AbstractUser):
     username = models.CharField(
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
+        validators=(validate_username,),
     )
     email = models.EmailField(
         max_length=254, unique=True, blank=False, null=False
@@ -102,7 +103,9 @@ class Genre(models.Model):
 
 class Title(models.Model):
     name = models.CharField(
-        verbose_name='название', max_length=TITLE_NAME_MAX_LENGTH, db_index=True
+        verbose_name='название',
+        max_length=TITLE_NAME_MAX_LENGTH,
+        db_index=True,
     )
     year = models.SmallIntegerField(
         verbose_name='год', validators=(validate_year,)
@@ -144,7 +147,7 @@ class Review(models.Model):
         related_name='reviews',
         verbose_name='автор',
     )
-    score = models.IntegerField(
+    score = models.PositiveSmallIntegerField(
         verbose_name='оценка',
         validators=(
             MinValueValidator(SCORE_MIN_VALUE),
