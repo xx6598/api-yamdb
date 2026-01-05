@@ -34,26 +34,30 @@ class User(AbstractUser):
         max_length=254, unique=True, blank=False, null=False
     )
     role = models.CharField(
-        'роль',
+        verbose_name='роль',
         max_length=ROLE_MAX_LENGTH,
         choices=ROLE_CHOICES,
         default=USER,
         blank=True,
     )
     bio = models.TextField(
-        'биография',
+        verbose_name='биография',
         blank=True,
     )
     first_name = models.CharField(
-        'имя', max_length=FIRST_NAME_MAX_LENGTH, blank=True
+        verbose_name='имя', max_length=FIRST_NAME_MAX_LENGTH, blank=True
     )
     last_name = models.CharField(
-        'фамилия', max_length=LAST_NAME_MAX_LENGTH, blank=True
+        verbose_name='фамилия', max_length=LAST_NAME_MAX_LENGTH, blank=True
     )
 
-    @property
-    def is_user(self):
-        return self.role == USER
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+
+    def __str__(self):
+        return self.username
 
     @property
     def is_admin(self):
@@ -63,20 +67,14 @@ class User(AbstractUser):
     def is_moderator(self):
         return self.role == MODERATOR
 
-    class Meta:
-        ordering = ('id',)
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
-
-    def __str__(self):
-        return self.username
-
 
 class Category(models.Model):
     name = models.CharField(
-        'имя категории', max_length=CATEGORY_NAME_MAX_LENGTH
+        verbose_name='имя категории', max_length=CATEGORY_NAME_MAX_LENGTH
     )
-    slug = models.SlugField('слаг категории', unique=True, db_index=True)
+    slug = models.SlugField(
+        verbose_name='слаг категории', unique=True, db_index=True
+    )
 
     class Meta:
         verbose_name = 'Категория'
@@ -87,8 +85,12 @@ class Category(models.Model):
 
 
 class Genre(models.Model):
-    name = models.CharField('имя жанра', max_length=GENRE_NAME_MAX_LENGTH)
-    slug = models.SlugField('cлаг жанра', unique=True, db_index=True)
+    name = models.CharField(
+        verbose_name='имя жанра', max_length=GENRE_NAME_MAX_LENGTH
+    )
+    slug = models.SlugField(
+        verbose_name='cлаг жанра', unique=True, db_index=True
+    )
 
     class Meta:
         verbose_name = 'Жанр'
@@ -100,9 +102,11 @@ class Genre(models.Model):
 
 class Title(models.Model):
     name = models.CharField(
-        'название', max_length=TITLE_NAME_MAX_LENGTH, db_index=True
+        verbose_name='название', max_length=TITLE_NAME_MAX_LENGTH, db_index=True
     )
-    year = models.IntegerField('год', validators=(validate_year,))
+    year = models.SmallIntegerField(
+        verbose_name='год', validators=(validate_year,)
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
@@ -110,7 +114,7 @@ class Title(models.Model):
         verbose_name='категория',
     )
     description = models.TextField(
-        'описание',
+        verbose_name='описание',
         null=True,
         blank=True,
     )
@@ -141,7 +145,7 @@ class Review(models.Model):
         verbose_name='автор',
     )
     score = models.IntegerField(
-        'оценка',
+        verbose_name='оценка',
         validators=(
             MinValueValidator(SCORE_MIN_VALUE),
             MaxValueValidator(SCORE_MAX_VALUE),
@@ -151,7 +155,7 @@ class Review(models.Model):
         },
     )
     pub_date = models.DateTimeField(
-        'дата публикации', auto_now_add=True, db_index=True
+        verbose_name='дата публикации', auto_now_add=True, db_index=True
     )
 
     class Meta:
@@ -182,7 +186,7 @@ class Comment(models.Model):
         verbose_name='отзыв',
     )
     text = models.CharField(
-        'текст комментария',
+        verbose_name='текст комментария',
     )
     author = models.ForeignKey(
         User,
@@ -191,7 +195,7 @@ class Comment(models.Model):
         verbose_name='автор',
     )
     pub_date = models.DateTimeField(
-        'дата публикации', auto_now_add=True, db_index=True
+        verbose_name='дата публикации', auto_now_add=True, db_index=True
     )
 
     class Meta:
