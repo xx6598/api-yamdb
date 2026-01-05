@@ -3,9 +3,13 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE, USERNAME_MAX_LENGTH
-from reviews.constants import (CATEGORY_NAME_MAX_LENGTH, FIRST_NAME_MAX_LENGTH,
-                               GENRE_NAME_MAX_LENGTH, LAST_NAME_MAX_LENGTH,
-                               TITLE_NAME_MAX_LENGTH)
+from reviews.constants import (
+    CATEGORY_NAME_MAX_LENGTH,
+    FIRST_NAME_MAX_LENGTH,
+    GENRE_NAME_MAX_LENGTH,
+    LAST_NAME_MAX_LENGTH,
+    TITLE_NAME_MAX_LENGTH,
+)
 from reviews.validators import validate_year
 
 USER = 'user'
@@ -18,19 +22,23 @@ ROLE_CHOICES = [
     (MODERATOR, MODERATOR),
 ]
 
+ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
+
 
 class User(AbstractUser):
     username = models.CharField(
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        blank=False,
-        null=False,
     )
     email = models.EmailField(
         max_length=254, unique=True, blank=False, null=False
     )
     role = models.CharField(
-        'роль', max_length=20, choices=ROLE_CHOICES, default=USER, blank=True
+        'роль',
+        max_length=ROLE_MAX_LENGTH,
+        choices=ROLE_CHOICES,
+        default=USER,
+        blank=True,
     )
     bio = models.TextField(
         'биография',
