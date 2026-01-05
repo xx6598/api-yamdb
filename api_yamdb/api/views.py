@@ -13,24 +13,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from api.constants import NOREPLY_EMAIL
 from api.filters import TitleFilter
 from api.mixins import ModelMixinSet
-from api.permissions import (
-    AdminModeratorAuthorPermission,
-    AdminOnly,
-    IsAdminUserOrReadOnly,
-)
-from api.serializers import (
-    CategorySerializer,
-    CommentSerializer,
-    GenreSerializer,
-    GetTokenSerializer,
-    ReviewSerializer,
-    SignUpSerializer,
-    TitleReadSerializer,
-    TitleWriteSerializer,
-    UsersSerializer,
-)
+from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
+                             IsAdminUserOrReadOnly)
+from api.serializers import (CategorySerializer, CommentSerializer,
+                             GenreSerializer, GetTokenSerializer,
+                             ReviewSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             UsersSerializer)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -102,7 +94,7 @@ class APISignup(APIView):
                 'Здравствуйте! '
                 f'Используйте этот токен для завершения регистрации: {token}'
             ),
-            from_email='noreply@example.com',
+            from_email=NOREPLY_EMAIL,
             recipient_list=[user.email],
         )
 

@@ -5,3 +5,5 @@ CONF_CODE_MAX_LENGTH = 40
 
 SCORE_MIN_VALUE = 1
 SCORE_MAX_VALUE = 10
+
+NOREPLY_EMAIL = "noreply@example.com"

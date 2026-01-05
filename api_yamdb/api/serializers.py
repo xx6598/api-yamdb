@@ -94,15 +94,15 @@ class TitleReadSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(read_only=True, many=True)
     rating = serializers.IntegerField(read_only=True)
 
+    class Meta:
+        model = Title
+        fields = '__all__'
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if representation['description'] is None:
             representation['description'] = ''
         return representation
-
-    class Meta:
-        model = Title
-        fields = '__all__'
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -117,6 +117,10 @@ class TitleWriteSerializer(serializers.ModelSerializer):
     )
     year = serializers.IntegerField()
 
+    class Meta:
+        model = Title
+        fields = '__all__'
+
     def validate_year(self, value):
         current_year = datetime.now().year
         if value > current_year:
@@ -130,15 +134,15 @@ class TitleWriteSerializer(serializers.ModelSerializer):
             instance.rating = None
         return TitleReadSerializer(instance, context=self.context).data
 
-    class Meta:
-        model = Title
-        fields = '__all__'
-
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         slug_field='username', read_only=True
     )
+
+    class Meta:
+        model = Review
+        exclude = ('title',)
 
     def validate(self, data):
         request = self.context.get('request')
@@ -154,10 +158,6 @@ class ReviewSerializer(serializers.ModelSerializer):
                         'Вы уже оставили отзыв на это произведение!'
                     )
         return data
-
-    class Meta:
-        model = Review
-        exclude = ('title',)
 
 
 class CommentSerializer(serializers.ModelSerializer):
