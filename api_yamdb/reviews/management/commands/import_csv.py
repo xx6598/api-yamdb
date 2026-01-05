@@ -37,7 +37,8 @@ class Command(BaseCommand):
                 total_imported += imported
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Загружено {imported} записей в {model._meta.verbose_name}'
+                        f'Загружено {imported} записей в '
+                        f'{model._meta.verbose_name}'
                     )
                 )
             else:
@@ -52,7 +53,7 @@ class Command(BaseCommand):
         )
 
     def import_from_csv(self, file_path, model):
-        """Импорт данных из CSV файла с использованием транзакций"""
+        '''Импорт данных из CSV файла с использованием транзакций'''
 
         with transaction.atomic():
             with open(file_path, 'r', encoding='utf-8') as file:
@@ -70,7 +71,8 @@ class Command(BaseCommand):
                     except Exception as e:
                         self.stdout.write(
                             self.style.ERROR(
-                                f'Ошибка в строке {os.path.basename(file_path)}: '
+                                'Ошибка в строке '
+                                f'{os.path.basename(file_path)}: '
                                 f'{row_dict} - {e}'
                             )
                         )
@@ -79,7 +81,7 @@ class Command(BaseCommand):
                 return successful_imports
 
     def process_model_fields(self, row_dict, model):
-        """Обработка специфичных полей для каждой модели"""
+        '''Обработка специфичных полей для каждой модели'''
 
         if model is User:
             self._process_user_fields(row_dict)
@@ -91,12 +93,12 @@ class Command(BaseCommand):
             self._process_comment_fields(row_dict)
 
     def _process_user_fields(self, row_dict):
-        """Обработка полей модели User"""
+        '''Обработка полей модели User'''
         if 'password' not in row_dict or not row_dict.get('password'):
             row_dict['password'] = make_password('default_password_123')
 
     def _process_title_fields(self, row_dict):
-        """Обработка полей модели Title"""
+        '''Обработка полей модели Title'''
         if 'category' in row_dict:
             try:
                 category_obj = Category.objects.get(id=row_dict['category'])
@@ -107,7 +109,7 @@ class Command(BaseCommand):
                 ) from exc
 
     def _process_review_fields(self, row_dict):
-        """Обработка полей модели Review"""
+        '''Обработка полей модели Review'''
         if 'author' in row_dict:
             try:
                 row_dict['author'] = User.objects.get(id=row_dict['author'])
@@ -126,7 +128,7 @@ class Command(BaseCommand):
                 ) from exc
 
     def _process_comment_fields(self, row_dict):
-        """Обработка полей модели Comment"""
+        '''Обработка полей модели Comment'''
         if 'author' in row_dict:
             try:
                 row_dict['author'] = User.objects.get(id=row_dict['author'])
@@ -147,17 +149,15 @@ class Command(BaseCommand):
                 ) from exc
 
     def handle_many_to_many(self, instance, row_dict, model):
-        """Обработка ManyToMany связей после создания объекта"""
+        '''Обработка ManyToMany связей после создания объекта'''
 
         if model is Title:
-            genre_title_path = os.path.join(
-                CSV_PATH, 'genre_title.csv'
-            )
+            genre_title_path = os.path.join(CSV_PATH, 'genre_title.csv')
             if os.path.exists(genre_title_path):
                 self.add_genres_to_title(instance, genre_title_path)
 
     def add_genres_to_title(self, title_instance, genre_title_path):
-        """Добавление жанров к произведению из genre_title.csv"""
+        '''Добавление жанров к произведению из genre_title.csv'''
 
         try:
             with open(genre_title_path, 'r', encoding='utf-8') as file:
@@ -171,7 +171,7 @@ class Command(BaseCommand):
                         except Genre.DoesNotExist:
                             self.stdout.write(
                                 self.style.WARNING(
-                                    f'Жанр с ID {row["genre_id"]} не найден'
+                                    f"Жанр с ID {row['genre_id']} не найден"
                                 )
                             )
                         except Exception as e:

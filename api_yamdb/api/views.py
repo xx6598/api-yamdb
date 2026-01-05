@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,13 +15,22 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from api.filters import TitleFilter
 from api.mixins import ModelMixinSet
-from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
-                             IsAdminUserOrReadOnly)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, GetTokenSerializer,
-                             ReviewSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             UsersSerializer)
+from api.permissions import (
+    AdminModeratorAuthorPermission,
+    AdminOnly,
+    IsAdminUserOrReadOnly,
+)
+from api.serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    GetTokenSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    UsersSerializer,
+)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -51,13 +60,14 @@ class UsersViewSet(viewsets.ModelViewSet):
                 request.user,
                 data=request.data,
                 partial=True,
-                context={'request': request}
+                context={'request': request},
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UsersSerializer(request.user,
-                                     context={'request': request})
+        serializer = UsersSerializer(
+            request.user, context={'request': request}
+        )
         return Response(serializer.data)
 
 
@@ -102,8 +112,7 @@ class APISignup(APIView):
         email = serializer.validated_data['email']
         username = serializer.validated_data['username']
         user, _ = User.objects.get_or_create(
-            email=email,
-            defaults={'username': username}
+            email=email, defaults={'username': username}
         )
         self.send_confirmation_token(user)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
