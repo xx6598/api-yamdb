@@ -1,27 +1,28 @@
 import logging
-import secrets
 
-from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from api.constants import NOREPLY_EMAIL
 from api.filters import TitleFilter
 from api.mixins import ModelMixinSet
 from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
                              IsAdminUserOrReadOnly)
 from api.serializers import (CategorySerializer, CommentSerializer,
                              GenreSerializer, GetTokenSerializer,
-                             NotAdminSerializer, ReviewSerializer,
-                             SignUpSerializer, TitleReadSerializer,
-                             TitleWriteSerializer, UsersSerializer)
+                             ReviewSerializer, SignUpSerializer,
+                             TitleReadSerializer, TitleWriteSerializer,
+                             UsersSerializer)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -46,17 +47,19 @@ class UsersViewSet(viewsets.ModelViewSet):
         url_path='me',
     )
     def get_current_user_info(self, request):
-        serializer_class = (
-            UsersSerializer if request.user.is_admin else NotAdminSerializer
-        )
         if request.method == 'PATCH':
-            serializer = serializer_class(
-                request.user, data=request.data, partial=True
+            serializer = UsersSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+                context={'request': request},
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = serializer_class(request.user)
+        serializer = UsersSerializer(
+            request.user, context={'request': request}
+        )
         return Response(serializer.data)
 
 
@@ -67,24 +70,14 @@ class APIGetToken(APIView):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data['username']
-        confirmation_code = serializer.validated_data['confirmation_code']
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            logger.warning(
-                'Попытка получения токена для несуществующего пользователя %s',
-                username,
-            )
-            return Response(
-                {'username': 'Пользователь не найден!'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        if confirmation_code == user.confirmation_code:
+        confirmation_token = serializer.validated_data['confirmation_code']
+        user = get_object_or_404(User, username=username)
+        if default_token_generator.check_token(user, confirmation_token):
             token = RefreshToken.for_user(user).access_token
-            logger.info('Успешное получение токена пользователем %s', username)
+            logger.info(f'Успешное получение токена пользователем {username}')
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         logger.warning(
-            'Неверный код подтверждения для пользователя: %s', username
+            f'Неверный код подтверждения (токен) для пользователя: {username}'
         )
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
@@ -93,93 +86,45 @@ class APIGetToken(APIView):
 
 
 class APISignup(APIView):
-    permission_classes = (permissions.AllowAny,)
-
-    def send_email(self, data):
-        try:
-            email = EmailMessage(
-                subject=data.get('email_subject', 'Код подтверждения'),
-                body=data.get('email_body', ''),
-                to=[data.get('to_email')],
-            )
-            email.send()
-            logger.info('Email отправлен на %s', data.get('to_email'))
-            return True
-        except Exception as e:
-            logger.error(
-                'Ошибка отправки email на %s: %s', data.get('to_email'), e
-            )
-            return False
+    def send_confirmation_token(self, user):
+        token = default_token_generator.make_token(user)
+        send_mail(
+            subject='Токен для завершения регистрации',
+            message=(
+                'Здравствуйте! '
+                f'Используйте этот токен для завершения регистрации: {token}'
+            ),
+            from_email=NOREPLY_EMAIL,
+            recipient_list=[user.email],
+        )
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
         username = serializer.validated_data['username']
-        try:
-            user = User.objects.get(username=username)
-            if user.email != email:
-                return Response(
-                    {
-                        'email': 'Email не совпадает с ранее указанным'
-                        ' для этого пользователя'
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user.confirmation_code = ''.join(
-                secrets.choice('0123456789') for _ in range(6)
-            )
-            user.save()
-            logger.info(
-                'Обновлен код подтверждения для существующего пользователя %s',
-                username,
-            )
-        except User.DoesNotExist:
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {'email': 'Пользователь с таким email уже существует'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user = serializer.save()
-            logger.info('Создан новый пользователь: %s', username)
-
-        email_body = (
-            f'Ваш код подтверждения для доступа к API:'
-            f' {user.confirmation_code}\n\n'
+        user, _ = User.objects.get_or_create(
+            email=email, defaults={'username': username}
         )
-        email_data = {
-            'email_body': email_body,
-            'to_email': user.email,
-            'email_subject': 'Код подтверждения для доступа к API',
-        }
-
-        if not self.send_email(email_data):
-            logger.warning(
-                'Не удалось отправить email пользователю %s', username
-            )
-
-        return Response(
-            {'username': user.username, 'email': user.email},
-            status=status.HTTP_200_OK,
-        )
+        self.send_confirmation_token(user)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
-class CategoryViewSet(ModelMixinSet):
+class ListCreateDestroyViewSet(ModelMixinSet):
+    permission_classes = (IsAdminUserOrReadOnly,)
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+
+class CategoryViewSet(ListCreateDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminUserOrReadOnly,)
-    filter_backends = (SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
 
 
-class GenreViewSet(ModelMixinSet):
+class GenreViewSet(ListCreateDestroyViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminUserOrReadOnly,)
-    filter_backends = (SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -187,16 +132,17 @@ class TitleViewSet(viewsets.ModelViewSet):
         Title.objects.annotate(rating=Avg('reviews__score'))
         .select_related('category')
         .prefetch_related('genre')
-        .all()
     )
     permission_classes = (IsAdminUserOrReadOnly,)
-    filter_backends = (DjangoFilterBackend, SearchFilter)
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_class = TitleFilter
     search_fields = ('name', 'description')
-    http_method_names = ['get', 'post', 'patch', 'delete']
+    http_method_names = ('get', 'post', 'patch', 'delete')
+    ordering_fields = ('rating', 'name', 'year')
+    ordering = ('-rating',)
 
     def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
+        if self.request.method in permissions.SAFE_METHODS:
             return TitleReadSerializer
         return TitleWriteSerializer
 
@@ -211,17 +157,20 @@ class ReviewViewSet(viewsets.ModelViewSet):
     filterset_fields = ('score', 'pub_date')
     http_method_names = ['get', 'post', 'patch', 'delete']
 
+    def get_title(self):
+        title_pk = self.kwargs.get('title_pk')
+        return get_object_or_404(Title, id=title_pk)
+
     def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
+        title = self.get_title()
         return title.reviews.select_related('author').all()
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_pk'))
+        title = self.get_title()
         serializer.save(author=self.request.user, title=title)
         logger.info(
-            'Создан отзыв пользователем %s на произведение %s',
-            self.request.user.username,
-            title.name,
+            f'Создан отзыв пользователем {self.request.user.username} '
+            f'на произведение {title.name}'
         )
 
 
@@ -234,15 +183,19 @@ class CommentViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
+    def get_review(self):
+        review_pk = self.kwargs.get('review_pk')
+        title_pk = self.kwargs.get('title_pk')
+        return get_object_or_404(Review, id=review_pk, title_id=title_pk)
+
     def get_queryset(self):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
+        review = self.get_review()
         return review.comments.select_related('author').all()
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review, id=self.kwargs.get('review_pk'))
+        review = self.get_review()
         serializer.save(author=self.request.user, review=review)
         logger.info(
-            'Создан комментарий пользователем %s к отзыву %s',
-            self.request.user.username,
-            review.pk,
+            f'Создан комментарий пользователем {self.request.user.username} '
+            f'к отзыву {review.pk}'
         )
