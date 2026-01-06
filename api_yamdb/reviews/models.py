@@ -76,8 +76,8 @@ class User(AbstractUser):
         return self.role == MODERATOR
 
 
-class TextAuthorDate(models.Model):
-    text = models.CharField()
+class TextAuthorDateModel(models.Model):
+    text = models.TextField()
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -158,7 +158,7 @@ class Title(models.Model):
         return self.name
 
 
-class Review(TextAuthorDate):
+class Review(TextAuthorDateModel):
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -176,7 +176,7 @@ class Review(TextAuthorDate):
         },
     )
 
-    class Meta(TextAuthorDate.Meta):
+    class Meta(TextAuthorDateModel.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = (
@@ -192,7 +192,7 @@ class Review(TextAuthorDate):
         )
 
 
-class Comment(TextAuthorDate):
+class Comment(TextAuthorDateModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
@@ -200,6 +200,6 @@ class Comment(TextAuthorDate):
         verbose_name='отзыв',
     )
 
-    class Meta(TextAuthorDate.Meta):
+    class Meta(TextAuthorDateModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
