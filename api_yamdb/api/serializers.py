@@ -5,8 +5,8 @@ from rest_framework import serializers
 from api.constants import (
     CONF_CODE_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
 )
+from reviews.constants import USERNAME_MAX_LENGTH
 from api.validators import (
     username_unique_validator,
     username_validator,

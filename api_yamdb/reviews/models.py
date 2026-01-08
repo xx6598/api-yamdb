@@ -2,7 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE, USERNAME_MAX_LENGTH
+from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE
+from reviews.constants import USERNAME_MAX_LENGTH
 from reviews.constants import (
     CATEGORY_NAME_MAX_LENGTH,
     FIRST_NAME_MAX_LENGTH,
