@@ -55,7 +55,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 context={'request': request},
             )
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(role=request.user.role)
             return Response(serializer.data, status=status.HTTP_200_OK)
         serializer = UsersSerializer(
             request.user, context={'request': request}
@@ -69,19 +69,14 @@ class APIGetToken(APIView):
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        confirmation_token = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(User, username=username)
-        if default_token_generator.check_token(user, confirmation_token):
-            token = RefreshToken.for_user(user).access_token
-            logger.info(f'Успешное получение токена пользователем {username}')
-            return Response({'token': str(token)}, status=status.HTTP_200_OK)
-        logger.warning(
-            f'Неверный код подтверждения (токен) для пользователя: {username}'
+        token = serializer.save()
+        logger.info(
+            f'Успешное получение токена пользователем '
+            f'{serializer.validated_data["username"]}'
         )
         return Response(
-            {'confirmation_code': 'Неверный код подтверждения!'},
-            status=status.HTTP_400_BAD_REQUEST,
+            {'token': str(token)},
+            status=status.HTTP_200_OK,
         )
 
 
