@@ -92,10 +92,11 @@ class TitleAdmin(admin.ModelAdmin):
         'get_genres',
     )
     search_fields = (
-        'genre',
-        'category',
+        'name',
+        'category__name',
+        'genre__name',
     )
-    list_filter = ('genre',)
+    list_filter = ('category', 'genre')
 
     @admin.display(description='Жанры')
     def get_genres(self, obj):
@@ -112,8 +113,8 @@ class ReviewAdmin(admin.ModelAdmin):
         'pub_date',
     )
     search_fields = (
-        'title',
-        'author',
+        'title__name',
+        'author__username',
         'text',
     )
     list_filter = ('author',)
@@ -127,8 +128,8 @@ class CommentAdmin(admin.ModelAdmin):
         'author',
     )
     search_fields = (
-        'review',
-        'author',
+        'review__title__name',
+        'author__username',
         'text',
     )
     list_filter = ('author',)

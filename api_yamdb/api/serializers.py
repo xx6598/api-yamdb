@@ -1,17 +1,17 @@
 from datetime import datetime
 
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound, ValidationError
 
-from api.constants import (
-    CONF_CODE_MAX_LENGTH,
-    EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-)
+from api.constants import CONF_CODE_MAX_LENGTH
+from reviews.constants import EMAIL_MAX_LENGTH
 from api.validators import (
     username_unique_validator,
     username_validator,
     validate_username_not_me,
 )
+from reviews.constants import USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -36,13 +36,6 @@ class UsersSerializer(serializers.ModelSerializer):
             'role',
         )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if not request.user.is_admin:
-                self.fields['role'].read_only = True
-
 
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
@@ -51,6 +44,23 @@ class GetTokenSerializer(serializers.Serializer):
     confirmation_code = serializers.CharField(
         required=True, max_length=CONF_CODE_MAX_LENGTH
     )
+
+    def validate(self, data):
+        username = data['username']
+        confirmation_code = data['confirmation_code']
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist as exc:
+            raise NotFound({'username': 'Пользователь не найден'}) from exc
+
+        if not default_token_generator.check_token(user, confirmation_code):
+            raise ValidationError(
+                {'confirmation_code': 'Неверный код подтверждения'}
+            )
+
+        data['user'] = user
+        return data
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -76,6 +86,10 @@ class SignUpSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
         return data
 
+    def save(self):
+        user, _ = User.objects.get_or_create(**self.validated_data)
+        return user
+
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,17 +106,11 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Title
         fields = '__all__'
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if representation['description'] is None:
-            representation['description'] = ''
-        return representation
 
 
 class TitleWriteSerializer(serializers.ModelSerializer):
@@ -130,8 +138,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         return value
 
     def to_representation(self, instance):
-        if not hasattr(instance, 'rating'):
-            instance.rating = None
         return TitleReadSerializer(instance, context=self.context).data
 
 

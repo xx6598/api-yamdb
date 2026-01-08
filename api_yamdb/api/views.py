@@ -11,18 +11,26 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from api.constants import NOREPLY_EMAIL
 from api.filters import TitleFilter
 from api.mixins import ModelMixinSet
-from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
-                             IsAdminUserOrReadOnly)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, GetTokenSerializer,
-                             ReviewSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             UsersSerializer)
+from api.permissions import (
+    AdminModeratorAuthorPermission,
+    AdminOnly,
+    IsAdminUserOrReadOnly,
+)
+from api.serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    GetTokenSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    UsersSerializer,
+)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -55,7 +63,7 @@ class UsersViewSet(viewsets.ModelViewSet):
                 context={'request': request},
             )
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(role=request.user.role)
             return Response(serializer.data, status=status.HTTP_200_OK)
         serializer = UsersSerializer(
             request.user, context={'request': request}
@@ -69,19 +77,14 @@ class APIGetToken(APIView):
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        confirmation_token = serializer.validated_data['confirmation_code']
-        user = get_object_or_404(User, username=username)
-        if default_token_generator.check_token(user, confirmation_token):
-            token = RefreshToken.for_user(user).access_token
-            logger.info(f'Успешное получение токена пользователем {username}')
-            return Response({'token': str(token)}, status=status.HTTP_200_OK)
-        logger.warning(
-            f'Неверный код подтверждения (токен) для пользователя: {username}'
+        token = serializer.save()
+        logger.info(
+            f'Успешное получение токена пользователем '
+            f"{serializer.validated_data['username']}"
         )
         return Response(
-            {'confirmation_code': 'Неверный код подтверждения!'},
-            status=status.HTTP_400_BAD_REQUEST,
+            {'token': str(token)},
+            status=status.HTTP_200_OK,
         )
 
 
@@ -101,11 +104,7 @@ class APISignup(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
-        username = serializer.validated_data['username']
-        user, _ = User.objects.get_or_create(
-            email=email, defaults={'username': username}
-        )
+        user = serializer.save()
         self.send_confirmation_token(user)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
@@ -132,6 +131,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         Title.objects.annotate(rating=Avg('reviews__score'))
         .select_related('category')
         .prefetch_related('genre')
+        .order_by('-rating')
     )
     permission_classes = (IsAdminUserOrReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
