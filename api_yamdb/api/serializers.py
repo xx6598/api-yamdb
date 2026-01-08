@@ -15,7 +15,7 @@ from api.validators import (
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
-class UsersSerializer(serializers.ModelSerializer):
+class BaseUserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=USERNAME_MAX_LENGTH,
         validators=[
@@ -36,12 +36,14 @@ class UsersSerializer(serializers.ModelSerializer):
             'role',
         )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            if not request.user.is_admin:
-                self.fields['role'].read_only = True
+
+class UserMeSerializer(BaseUserSerializer):
+    class Meta(BaseUserSerializer.Meta):
+        read_only_fields = ('role',)
+
+
+class AdminUserSerializer(BaseUserSerializer):
+    pass
 
 
 class GetTokenSerializer(serializers.Serializer):
@@ -152,7 +154,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             title_pk = view.kwargs.get('title_pk')
             if title_pk and request.user:
                 if Review.objects.filter(
-                    author=request.user, title_id=title_pk
+                        author=request.user, title_id=title_pk
                 ).exists():
                     raise serializers.ValidationError(
                         'Вы уже оставили отзыв на это произведение!'
