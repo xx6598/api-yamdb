@@ -16,13 +16,22 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from api.constants import NOREPLY_EMAIL
 from api.filters import TitleFilter
 from api.mixins import ModelMixinSet
-from api.permissions import (AdminModeratorAuthorPermission, AdminOnly,
-                             IsAdminUserOrReadOnly)
-from api.serializers import (CategorySerializer, CommentSerializer,
-                             GenreSerializer, GetTokenSerializer,
-                             ReviewSerializer, SignUpSerializer,
-                             TitleReadSerializer, TitleWriteSerializer,
-                             UsersSerializer)
+from api.permissions import (
+    AdminModeratorAuthorPermission,
+    AdminOnly,
+    IsAdminUserOrReadOnly,
+)
+from api.serializers import (
+    CategorySerializer,
+    CommentSerializer,
+    GenreSerializer,
+    GetTokenSerializer,
+    ReviewSerializer,
+    SignUpSerializer,
+    TitleReadSerializer,
+    TitleWriteSerializer,
+    UsersSerializer,
+)
 from reviews.models import Category, Genre, Review, Title, User
 
 logger = logging.getLogger(__name__)
@@ -72,7 +81,7 @@ class APIGetToken(APIView):
         token = serializer.save()
         logger.info(
             f'Успешное получение токена пользователем '
-            f'{serializer.validated_data["username"]}'
+            f'{serializer.validated_data['username']}'
         )
         return Response(
             {'token': str(token)},
@@ -96,11 +105,7 @@ class APISignup(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
-        username = serializer.validated_data['username']
-        user, _ = User.objects.get_or_create(
-            email=email, defaults={'username': username}
-        )
+        user = serializer.save()
         self.send_confirmation_token(user)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
@@ -127,6 +132,7 @@ class TitleViewSet(viewsets.ModelViewSet):
         Title.objects.annotate(rating=Avg('reviews__score'))
         .select_related('category')
         .prefetch_related('genre')
+        .order_by('-rating')
     )
     permission_classes = (IsAdminUserOrReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)

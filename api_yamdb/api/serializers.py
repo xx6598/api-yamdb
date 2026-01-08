@@ -5,8 +5,11 @@ from rest_framework import serializers
 from rest_framework.exceptions import NotFound, ValidationError
 
 from api.constants import CONF_CODE_MAX_LENGTH, EMAIL_MAX_LENGTH
-from api.validators import (username_unique_validator, username_validator,
-                            validate_username_not_me)
+from api.validators import (
+    username_unique_validator,
+    username_validator,
+    validate_username_not_me,
+)
 from reviews.constants import USERNAME_MAX_LENGTH
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
@@ -81,6 +84,10 @@ class SignUpSerializer(serializers.Serializer):
         if errors:
             raise serializers.ValidationError(errors)
         return data
+
+    def save(self):
+        user, _ = User.objects.get_or_create(**self.validated_data)
+        return user
 
 
 class CategorySerializer(serializers.ModelSerializer):
