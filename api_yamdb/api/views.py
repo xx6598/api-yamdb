@@ -30,15 +30,21 @@ logger = logging.getLogger(__name__)
 
 class UsersViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    serializer_class = AdminUserSerializer
-    permission_classes = (
-        permissions.IsAuthenticated,
-        AdminOnly,
-    )
+    permission_classes = (permissions.IsAuthenticated, AdminOnly)
     lookup_field = 'username'
     filter_backends = (SearchFilter,)
     search_fields = ('username',)
     http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_serializer_class(self):
+        if self.action == 'get_current_user_info':
+            return UserMeSerializer
+        return AdminUserSerializer
+
+    def get_object(self):
+        if self.action == 'get_current_user_info':
+            return self.request.user
+        return super().get_object()
 
     @action(
         methods=['GET', 'PATCH'],
@@ -46,18 +52,11 @@ class UsersViewSet(viewsets.ModelViewSet):
         permission_classes=(permissions.IsAuthenticated,),
         url_path='me',
     )
-    def get_current_user_info(self, request):
+    def get_current_user_info(self, request, *args, **kwargs):
+        if request.method == 'GET':
+            return self.retrieve(request, *args, **kwargs)
         if request.method == 'PATCH':
-            serializer = UserMeSerializer(
-                request.user,
-                data=request.data,
-                partial=True,
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UserMeSerializer(request.user)
-        return Response(serializer.data)
+            return self.partial_update(request, *args, **kwargs)
 
 
 class APIGetToken(APIView):
