@@ -11,7 +11,6 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from api.constants import NOREPLY_EMAIL
 from api.filters import TitleFilter
@@ -81,7 +80,7 @@ class APIGetToken(APIView):
         token = serializer.save()
         logger.info(
             f'Успешное получение токена пользователем '
-            f'{serializer.validated_data['username']}'
+            f"{serializer.validated_data['username']}"
         )
         return Response(
             {'token': str(token)},

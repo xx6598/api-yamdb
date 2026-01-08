@@ -4,7 +4,8 @@ from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound, ValidationError
 
-from api.constants import CONF_CODE_MAX_LENGTH, EMAIL_MAX_LENGTH
+from api.constants import CONF_CODE_MAX_LENGTH
+from reviews.constants import EMAIL_MAX_LENGTH
 from api.validators import (
     username_unique_validator,
     username_validator,
