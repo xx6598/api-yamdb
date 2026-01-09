@@ -1,5 +1,8 @@
+import logging
 from datetime import datetime
 
+from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from api.constants import CONF_CODE_MAX_LENGTH
@@ -13,6 +16,8 @@ from reviews.constants import (
     USERNAME_MAX_LENGTH,
 )
 from reviews.models import Category, Comment, Genre, Review, Title, User
+
+logger = logging.getLogger(__name__)
 
 
 class BaseUserSerializer(serializers.ModelSerializer):
@@ -47,12 +52,21 @@ class AdminUserSerializer(BaseUserSerializer):
 
 
 class GetTokenSerializer(serializers.Serializer):
-    username = serializers.CharField(
-        required=True, max_length=USERNAME_MAX_LENGTH
-    )
-    confirmation_code = serializers.CharField(
-        required=True, max_length=CONF_CODE_MAX_LENGTH
-    )
+    username = serializers.CharField(max_length=USERNAME_MAX_LENGTH)
+    confirmation_code = serializers.CharField(max_length=CONF_CODE_MAX_LENGTH)
+
+    def validate(self, data):
+        username = data['username']
+        confirmation_code = data['confirmation_code']
+        user = get_object_or_404(User, username=username)
+        if not default_token_generator.check_token(user, confirmation_code):
+            logger.warning(f'Неверный код подтверждения'
+                           f' для пользователя: {username}')
+            raise serializers.ValidationError({
+                'confirmation_code': 'Неверный код подтверждения!'
+            })
+        data['user'] = user
+        return data
 
 
 class SignUpSerializer(serializers.Serializer):
