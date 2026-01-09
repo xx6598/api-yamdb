@@ -2,10 +2,16 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE
-from reviews.constants import (EMAIL_MAX_LENGTH, FIRST_NAME_MAX_LENGTH,
-                               LAST_NAME_MAX_LENGTH, NAME_MAX_LENGTH,
-                               TITLE_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH)
+from reviews.constants import (
+    EMAIL_MAX_LENGTH,
+    FIRST_NAME_MAX_LENGTH,
+    LAST_NAME_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    SCORE_MAX_VALUE,
+    SCORE_MIN_VALUE,
+    TITLE_NAME_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
 from reviews.validators import validate_username, validate_year
 
 USER = 'user'
@@ -27,6 +33,9 @@ class NamedModel(models.Model):
     class Meta:
         abstract = True
         ordering = ('name',)
+
+    def __str__(self):
+        return self.name
 
 
 class User(AbstractUser):
@@ -81,7 +90,6 @@ class TextAuthorDateModel(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)ss_author',
         verbose_name='автор',
     )
     pub_date = models.DateTimeField(
@@ -97,9 +105,6 @@ class TextAuthorDateModel(models.Model):
 
 
 class SlugModel(models.Model):
-    models.CharField(
-        verbose_name='имя',
-    )
     slug = models.SlugField(verbose_name='слаг', unique=True, db_index=True)
 
     class Meta(NamedModel.Meta):
@@ -182,16 +187,17 @@ class Review(TextAuthorDateModel):
                 )
             ),
         )
+        default_related_name = 'reviews'
 
 
 class Comment(TextAuthorDateModel):
     review = models.ForeignKey(
         Review,
         on_delete=models.CASCADE,
-        related_name='comments',
         verbose_name='отзыв',
     )
 
     class Meta(TextAuthorDateModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
+        default_related_name = 'comments'
