@@ -77,11 +77,11 @@ class User(AbstractUser):
 
 
 class TextAuthorDateModel(models.Model):
-    text = models.TextField()
+    text = models.TextField(verbose_name='текст')
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)ss_author',
+        related_name='%(class)ss',
         verbose_name='автор',
     )
     pub_date = models.DateTimeField(
@@ -90,29 +90,26 @@ class TextAuthorDateModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('pub_date',)
+        ordering = ('-pub_date',)
 
     def __str__(self):
-        return self.text
+        return self.text[:30]
 
 
-class SlugModel(models.Model):
-    models.CharField(
-        verbose_name='имя',
-    )
+class SlugModel(NamedModel):
     slug = models.SlugField(verbose_name='слаг', unique=True, db_index=True)
 
     class Meta(NamedModel.Meta):
         abstract = True
 
 
-class Category(NamedModel, SlugModel):
+class Category(SlugModel):
     class Meta(SlugModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(NamedModel, SlugModel):
+class Genre(SlugModel):
     class Meta(SlugModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
@@ -136,7 +133,6 @@ class Title(models.Model):
     description = models.TextField(
         verbose_name='описание',
         default='',
-        null=True,
         blank=True,
     )
     genre = models.ManyToManyField(
@@ -172,17 +168,17 @@ class Review(TextAuthorDateModel):
     class Meta(TextAuthorDateModel.Meta):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
-        constraints = (
+        constraints = [
             (
                 models.UniqueConstraint(
                     fields=(
                         'title',
                         'author',
                     ),
-                    name='unique review',
+                    name='unique_review',
                 )
             ),
-        )
+        ]
 
 
 class Comment(TextAuthorDateModel):
