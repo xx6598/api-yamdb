@@ -22,7 +22,8 @@ ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
 
 
 class NamedModel(models.Model):
-    name = models.CharField(verbose_name='имя', max_length=NAME_MAX_LENGTH)
+    name = models.CharField(verbose_name='имя',
+                            max_length=NAME_MAX_LENGTH, db_index=True)
 
     class Meta:
         abstract = True
