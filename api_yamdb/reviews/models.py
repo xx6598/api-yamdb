@@ -2,15 +2,11 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE, USERNAME_MAX_LENGTH
-from reviews.constants import (
-    CATEGORY_NAME_MAX_LENGTH,
-    FIRST_NAME_MAX_LENGTH,
-    GENRE_NAME_MAX_LENGTH,
-    LAST_NAME_MAX_LENGTH,
-    TITLE_NAME_MAX_LENGTH,
-)
-from reviews.validators import validate_year, validate_username
+from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE
+from reviews.constants import (EMAIL_MAX_LENGTH, FIRST_NAME_MAX_LENGTH,
+                               LAST_NAME_MAX_LENGTH, NAME_MAX_LENGTH,
+                               TITLE_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH)
+from reviews.validators import validate_username, validate_year
 
 USER = 'user'
 ADMIN = 'admin'
@@ -25,7 +21,8 @@ ROLE_CHOICES = [
 ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
 
 
-class BaseModel(models.Model):
+class NamedModel(models.Model):
+    name = models.CharField(verbose_name='имя', max_length=NAME_MAX_LENGTH)
 
     class Meta:
         abstract = True
@@ -34,12 +31,15 @@ class BaseModel(models.Model):
 
 class User(AbstractUser):
     username = models.CharField(
+        verbose_name='имя пользователя',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         validators=(validate_username,),
     )
     email = models.EmailField(
-        max_length=254, unique=True, blank=False, null=False
+        verbose_name='e-mail',
+        max_length=EMAIL_MAX_LENGTH,
+        unique=True,
     )
     role = models.CharField(
         verbose_name='роль',
@@ -81,7 +81,7 @@ class TextAuthorDateModel(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='%(class)s_author',
+        related_name='%(class)ss_author',
         verbose_name='автор',
     )
     pub_date = models.DateTimeField(
@@ -97,30 +97,22 @@ class TextAuthorDateModel(models.Model):
 
 
 class SlugModel(models.Model):
+    models.CharField(
+        verbose_name='имя',
+    )
     slug = models.SlugField(verbose_name='слаг', unique=True, db_index=True)
 
-    class Meta(BaseModel.Meta):
+    class Meta(NamedModel.Meta):
         abstract = True
 
-    def __str__(self):
-        return f'{self.name}'
 
-
-class Category(SlugModel):
-    name = models.CharField(
-        verbose_name='имя категории', max_length=CATEGORY_NAME_MAX_LENGTH
-    )
-
+class Category(NamedModel, SlugModel):
     class Meta(SlugModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(SlugModel):
-    name = models.CharField(
-        verbose_name='имя жанра', max_length=GENRE_NAME_MAX_LENGTH
-    )
-
+class Genre(NamedModel, SlugModel):
     class Meta(SlugModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
