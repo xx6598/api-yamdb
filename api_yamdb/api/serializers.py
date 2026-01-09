@@ -2,15 +2,15 @@ from datetime import datetime
 
 from rest_framework import serializers
 
-from api.constants import (
-    CONF_CODE_MAX_LENGTH,
-    EMAIL_MAX_LENGTH,
-    USERNAME_MAX_LENGTH,
-)
+from api.constants import CONF_CODE_MAX_LENGTH
 from api.validators import (
     username_unique_validator,
     username_validator,
     validate_username_not_me,
+)
+from reviews.constants import (
+    EMAIL_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
 )
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
