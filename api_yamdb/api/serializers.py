@@ -94,7 +94,7 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleReadSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         model = Title
@@ -132,8 +132,6 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         return value
 
     def to_representation(self, instance):
-        if not hasattr(instance, 'rating'):
-            instance.rating = None
         return TitleReadSerializer(instance, context=self.context).data
 
 
