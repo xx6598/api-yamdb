@@ -2,9 +2,9 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE
 from reviews.constants import (EMAIL_MAX_LENGTH, FIRST_NAME_MAX_LENGTH,
                                LAST_NAME_MAX_LENGTH, NAME_MAX_LENGTH,
+                               SCORE_MAX_VALUE, SCORE_MIN_VALUE,
                                TITLE_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH)
 from reviews.validators import validate_username, validate_year
 
