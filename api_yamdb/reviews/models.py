@@ -135,6 +135,7 @@ class Title(models.Model):
     )
     description = models.TextField(
         verbose_name='описание',
+        default='',
         null=True,
         blank=True,
     )

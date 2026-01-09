@@ -100,12 +100,6 @@ class TitleReadSerializer(serializers.ModelSerializer):
         model = Title
         fields = '__all__'
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        if representation['description'] is None:
-            representation['description'] = ''
-        return representation
-
 
 class TitleWriteSerializer(serializers.ModelSerializer):
     category = serializers.SlugRelatedField(
