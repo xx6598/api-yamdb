@@ -3,9 +3,14 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from api.constants import SCORE_MAX_VALUE, SCORE_MIN_VALUE
-from reviews.constants import (EMAIL_MAX_LENGTH, FIRST_NAME_MAX_LENGTH,
-                               LAST_NAME_MAX_LENGTH, NAME_MAX_LENGTH,
-                               TITLE_NAME_MAX_LENGTH, USERNAME_MAX_LENGTH)
+from reviews.constants import (
+    EMAIL_MAX_LENGTH,
+    FIRST_NAME_MAX_LENGTH,
+    LAST_NAME_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    TITLE_NAME_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+)
 from reviews.validators import validate_username, validate_year
 
 USER = 'user'
@@ -22,8 +27,9 @@ ROLE_MAX_LENGTH = max(len(role) for role, _ in ROLE_CHOICES)
 
 
 class NamedModel(models.Model):
-    name = models.CharField(verbose_name='имя',
-                            max_length=NAME_MAX_LENGTH, db_index=True)
+    name = models.CharField(
+        verbose_name='имя', max_length=NAME_MAX_LENGTH, db_index=True
+    )
 
     class Meta:
         abstract = True
@@ -171,14 +177,14 @@ class Review(TextAuthorDateModel):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [
-                models.UniqueConstraint(
-                    fields=(
-                        'title',
-                        'author',
-                    ),
-                    name='unique_review',
-                )
-         ]
+            models.UniqueConstraint(
+                fields=(
+                    'title',
+                    'author',
+                ),
+                name='unique_review',
+            )
+        ]
 
 
 class Comment(TextAuthorDateModel):

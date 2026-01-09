@@ -60,11 +60,12 @@ class GetTokenSerializer(serializers.Serializer):
         confirmation_code = data['confirmation_code']
         user = get_object_or_404(User, username=username)
         if not default_token_generator.check_token(user, confirmation_code):
-            logger.warning(f'Неверный код подтверждения'
-                           f' для пользователя: {username}')
-            raise serializers.ValidationError({
-                'confirmation_code': 'Неверный код подтверждения!'
-            })
+            logger.warning(
+                f'Неверный код подтверждения для пользователя: {username}'
+            )
+            raise serializers.ValidationError(
+                {'confirmation_code': 'Неверный код подтверждения!'}
+            )
         data['user'] = user
         return data
 
@@ -160,7 +161,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             title_pk = view.kwargs.get('title_pk')
             if title_pk and request.user:
                 if Review.objects.filter(
-                        author=request.user, title_id=title_pk
+                    author=request.user, title_id=title_pk
                 ).exists():
                     raise serializers.ValidationError(
                         'Вы уже оставили отзыв на это произведение!'
