@@ -28,6 +28,8 @@ class NamedModel(models.Model):
         abstract = True
         ordering = ('name',)
 
+    def __str__(self):
+        return self.name
 
 class User(AbstractUser):
     username = models.CharField(
