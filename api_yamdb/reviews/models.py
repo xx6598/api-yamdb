@@ -142,6 +142,7 @@ class Title(models.Model):
     class Meta:
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
+        ordering = ('-year', 'name')
 
     def __str__(self):
         return self.name
@@ -169,7 +170,6 @@ class Review(TextAuthorDateModel):
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
         constraints = [
-            (
                 models.UniqueConstraint(
                     fields=(
                         'title',
@@ -177,8 +177,7 @@ class Review(TextAuthorDateModel):
                     ),
                     name='unique_review',
                 )
-            ),
-        ]
+         ]
 
 
 class Comment(TextAuthorDateModel):
