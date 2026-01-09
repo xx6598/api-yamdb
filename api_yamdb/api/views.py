@@ -125,13 +125,14 @@ class TitleViewSet(viewsets.ModelViewSet):
         Title.objects.annotate(rating=Avg("reviews__score"))
         .select_related("category")
         .prefetch_related("genre")
+        .order_by('-rating', '-id')
     )
     permission_classes = (IsAdminUserOrReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_class = TitleFilter
     search_fields = ("name", "description")
     http_method_names = ("get", "post", "patch", "delete")
-    ordering_fields = ("rating", "name", "year")
+    ordering_fields = ("name", "year", "rating")
     ordering = ("-rating",)
 
     def get_serializer_class(self):
